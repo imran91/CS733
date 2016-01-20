@@ -8,16 +8,24 @@ import (
 	"strconv"
 	"strings"
 	"io"
+  "sync"
+  "time"
 )
 
 type command_meta struct {
 	operation string
 	filename  string
 	numbytes  int
-	expiry    int64
-	version   int
+	expiry    int
+	version   int64
   data string
 }
+
+//map manager to hold files 
+var kvmanager = struct{
+    sync.RWMutex
+    kv map[string]*command_meta
+}{kv: make(map[string]*command_meta)}
 
 //parse the command and return it into command_meta object
 func parser(cmd string) command_meta {
@@ -34,12 +42,15 @@ func parser(cmd string) command_meta {
 			break
 		}
 		cobj.numbytes = nbytes
-		exp, err2 := strconv.Atoi(command_split[3])
+
+    if len(command_split) == 4 {
+    exp, err2 := strconv.Atoi(command_split[3])
 		if err2 != nil {
 			log.Println(err2)
 			break
 		}
-		cobj.expiry = int64(exp)
+		cobj.expiry = exp
+  }
 		return cobj
 
 	case "read":
@@ -52,7 +63,7 @@ func parser(cmd string) command_meta {
 			log.Println(err1)
 			break
 		}
-		cobj.version = ver
+		cobj.version = int64(ver)
 		nbytes, err2 := strconv.Atoi(command_split[3])
 		if err2 != nil {
 			log.Println(err2)
@@ -65,7 +76,7 @@ func parser(cmd string) command_meta {
 				log.Println(err3)
 				break
 			}
-			cobj.expiry = int64(exp)
+			cobj.expiry = exp
 		}
 		return cobj
 	case "delete":
@@ -79,6 +90,7 @@ func handleConnection(conn net.Conn) {
 	addr := conn.RemoteAddr()
 	log.Println(addr, "connected.")
 	reader := bufio.NewReader(conn)
+  var ver int64 = 1
 	for {
 
 		message, err := reader.ReadString('\n')
@@ -88,51 +100,175 @@ func handleConnection(conn net.Conn) {
 		}
 		message = strings.TrimRight(message, "\r\n")
 		parsed_comm := parser(message)
+    
     switch parsed_comm.operation {
     case "write":
-        buffer := make([]byte, parsed_comm.numbytes)
-        _, err1 := io.ReadFull(reader, buffer)
-        if (err1) != nil {
-          //Read error
-          log.Println("ERROR reading data:", addr, err1)
-          break
+      t := parsed_comm.expiry
+      fmt.Println("t:",t)
+      if t != 0 {
+          fmt.Println("time_before:",time.Now().Unix())
+          t += int(time.Now().Unix())
         }
+      parsed_comm.expiry = t
+      fmt.Println("time_new:",parsed_comm.expiry)
 
-        extra_data, err2 := reader.ReadString('\n')
-        if (err2) != nil {
-          //Read error
-          log.Println("ERROR reading post-data:", addr, err2)
-          break
+      buffer := make([]byte, parsed_comm.numbytes)
+      _, err1 := io.ReadFull(reader, buffer)
+      if (err1) != nil {
+        //Read error
+        log.Println("ERROR reading data:", addr, err1)
+        break
+      }
+
+      extra_data, err2 := reader.ReadString('\n')
+      if (err2) != nil {
+        //Read error
+        log.Println("ERROR reading post-data:", addr, err2)
+        break
+      }
+
+      parsed_comm.data = string(buffer)       
+
+      if (strings.TrimRight(extra_data,"\r\n") != "") || (len(parsed_comm.data) != parsed_comm.numbytes) {
+        log.Println("ERROR IN CMD")
+        continue
+      }        
+
+        kvmanager.RLock()
+        obj, present := kvmanager.kv[parsed_comm.filename]
+        kvmanager.RUnlock()
+        
+      if present {
+        ver = obj.version
+        ver = ver + 1
+        parsed_comm.version = ver
+        } else {
+        parsed_comm.version = ver
+        ver = ver + 1
+      }
+
+        ref := &(parsed_comm)
+        kvmanager.Lock()
+        kvmanager.kv[parsed_comm.filename] = ref
+        kvmanager.Unlock()
+
+        kvmanager.RLock()
+        conn.Write([]byte( "OK " + strconv.Itoa(int(kvmanager.kv[parsed_comm.filename].version)) +"\r\n"))
+        kvmanager.RUnlock()      
+        break
+
+    case "read":
+        kvmanager.RLock()
+        obj, present := kvmanager.kv[parsed_comm.filename]
+        if present {
+          kvmanager.RUnlock()
+          t := obj.expiry
+          fmt.Println("read expiry time is:",t)
+          if t != 0 {
+            t = obj.expiry - int(time.Now().Unix()) // remaining time
+            fmt.Println("new expiry time is:",t)
+          }
+          if t < 0 {
+           fmt.Println("less than zero time is:",t)
+            t = 0
+          }
+
+          //kvmanager.RUnlock()
+          _, err := conn.Write([]byte( "CONTENTS " + strconv.Itoa(int(obj.version)) + " " + strconv.Itoa(obj.numbytes) + " " + 
+                strconv.Itoa(t) + " " + "\r\n" + obj.data +"\r\n"))
+          if err != nil {
+               fmt.Println(err)
+          }
+        } else {
+          kvmanager.RUnlock()
+          _, err := conn.Write([]byte("ERRNOTFOUND\r\n"))
+          fmt.Println(err)
         }
-        parsed_comm.data = string(buffer)
-        if (strings.TrimRight(extra_data,"\r\n") != "") || (len(parsed_comm.data) != parsed_comm.numbytes) {
-          log.Println("ERROR IN CMD")
-          continue
+      break
+      
+    case "cas":
+        kvmanager.RLock()
+        obj, present := kvmanager.kv[parsed_comm.filename]
+        if present {
+            kvmanager.RUnlock()
+            if obj.version == parsed_comm.version {
+              t := parsed_comm.expiry
+              if t != 0 {
+              t += int(time.Now().Unix())
+              }
+              parsed_comm.expiry = t
+
+              buffer := make([]byte, parsed_comm.numbytes)
+               _, err1 := io.ReadFull(reader, buffer)
+              if err1 != nil {
+                //Read error
+                log.Println("ERROR reading data:", addr, err1)
+                break
+              }     
+
+              extra_data, err2 := reader.ReadString('\n')
+              if err2 != nil {
+                //Read error
+                log.Println("ERROR reading post-data:", addr, err2)
+                break
+              }     
+
+              parsed_comm.data = string(buffer)
+              ver = obj.version
+              ver = ver + 1
+              parsed_comm.version = ver
+              
+              if (strings.TrimRight(extra_data,"\r\n") != "") || (len(parsed_comm.data) != parsed_comm.numbytes) {
+                log.Println("ERROR IN CMD")
+                continue
+              }
+
+              kvmanager.Lock()
+              fmt.Println("hello")
+              kvmanager.kv[parsed_comm.filename].expiry = parsed_comm.expiry
+              kvmanager.kv[parsed_comm.filename].version = parsed_comm.version
+              kvmanager.kv[parsed_comm.filename].data = parsed_comm.data
+              kvmanager.kv[parsed_comm.filename].numbytes = parsed_comm.numbytes
+              kvmanager.Unlock()
+
+              fmt.Println("filename:", parsed_comm.filename)
+              fmt.Println(" numbytes:", parsed_comm.numbytes)
+              fmt.Println(" expiry: ", parsed_comm.expiry)
+              fmt.Println(" version: ", parsed_comm.version)
+              fmt.Println(" data: ", parsed_comm.data)
+              kvmanager.RLock()
+              conn.Write([]byte( "Ok " + strconv.Itoa(int(kvmanager.kv[parsed_comm.filename].version)) +"\r\n"))
+              kvmanager.RUnlock()
+            } else {
+              _, err := conn.Write([]byte("VER NOT FOUND\r\n"))
+              fmt.Println(err)
+            }
+        } else {
+          kvmanager.RUnlock()
+          _, err := conn.Write([]byte("FILE NOT FOUND\r\n"))
+          fmt.Println(err)
         }
-        break;
+      break
+
+    case "delete":
+      kvmanager.RLock()
+        _, present := kvmanager.kv[parsed_comm.filename]
+      kvmanager.RUnlock()
+        if present {
+          kvmanager.Lock()
+          delete(kvmanager.kv,parsed_comm.filename)
+          kvmanager.Unlock()
+        _, err := conn.Write([]byte("OK\r\n"))
+        if err != nil {
+               fmt.Println(err)
+          }
+        } else {
+          _, err := conn.Write([]byte("ERRNOTFOUND\r\n"))
+          fmt.Println(err)
+        }
+      break
     }
-
-    
-    fmt.Println("filename:", parsed_comm.filename)
-    fmt.Println(" numbytes:", parsed_comm.numbytes)
-    fmt.Println(" expiry: ", parsed_comm.expiry)
-    fmt.Println(" version: ", parsed_comm.version)
-    fmt.Println(" data: ", parsed_comm.data)
-		/*cmd, e := parser(message)
-		  if e != nil {
-		    //write(writer, addr, e.Error())
-		    log.Println("ERROR parsing:", addr, e)
-		    } else {
-
-		    }*/
-		// output message received
-
-		// sample process for string received
-		//newmessage := strings.ToUpper(message)
-		// send new string back to client
-		//conn.Write([]byte(newmessage + "\n"))
 	}
-
 	conn.Close() //used for clean up actions
 }
 
@@ -157,7 +293,6 @@ func serverMain() {
 
 	defer ln.Close()
 
-	// run loop forever (or until ctrl-c)
 	for {
 		// accept connection on port
 		conn, con_err := ln.Accept()
