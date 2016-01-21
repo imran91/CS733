@@ -2,7 +2,7 @@
 Versioned File Server
 
 #Installation
-1.Download a copy using:	go get github.com/imran91/CS733
+1.Download a copy using:	git clone https://github.com/imran91/CS733.git
 
 2.Change directory to : cd $GOPATH/src/github.com/imran91/CS733/Assignment1
 
