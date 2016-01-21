@@ -1,11 +1,13 @@
 # CS733
 Versioned File Server
-##Installation
-##Command Specification
+
+#Installation
+
+#Command Specification
 1.	Write: create a file, or update the file’s contents if it already exists.
 	
 	write <filename> <numbytes> [<exptime>]\r\n
-	<content bytes>\r\n
+    <content bytes>\r\n
 	
 	The server responds with the following:
 	
@@ -38,7 +40,8 @@ Versioned File Server
 	
 	OK\r\n
 
-##Errors
+#Errors
+
 1.	ERR_VERSION <newversion>\r\n (the contents were not updated because of a
 	version mismatch. The latest version is returned)
 
