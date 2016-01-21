@@ -10,31 +10,31 @@ Versioned File Server
 
 #Command Specification
 1.	Write: create a file, or update the file’s contents if it already exists. <br/>
-	write &lt;filename&gt; &lt;numbytes&gt; [&lt;exptime&gt;]\r\n	
-    	&lt;content bytes&gt;\r\n
+	write &lt;filename&gt; &lt;numbytes&gt; [&lt;exptime&gt;]\r\n<br/>
+    	&lt;content bytes&gt;\r\n<br/>
 
-	The server responds with the following:	
-	OK &lt;version&gt;\r\n
+	The server responds with the following:<br/>	
+	OK &lt;version&gt;\r\n<br/>
 
-2.	Read: Given a filename, retrieve the corresponding file:
-    read &lt;filename&gt;\r\n
+2.	Read: Given a filename, retrieve the corresponding file:<br/>
+    read &lt;filename&gt;\r\n<br/>
 	
-	The server responds with the following format (or one of the errors described later)
-	CONTENTS &lt;version&gt; &lt;numbytes&gt; &lt;exptime&gt; \r\n
-	&lt;content bytes&gt;\r\n
+	The server responds with the following format (or one of the errors described later)<br/>
+	CONTENTS &lt;version&gt; &lt;numbytes&gt; &lt;exptime&gt; \r\n<br/>
+	&lt;content bytes&gt;\r\n<br/>
 
 3.	Compare and swap. This replaces the old file contents with the new content
-	provided the version is still the same.
-	cas &lt;filename&gt; &lt;version&gt; &lt;numbytes&gt; [&lt;exptime&gt;]\r\n
-	&lt;content bytes&gt;\r\n
+	provided the version is still the same.<br/>
+	cas &lt;filename&gt; &lt;version&gt; &lt;numbytes&gt; [&lt;exptime&gt;]\r\n<br/>
+	&lt;content bytes&gt;\r\n<br/>
 	
-	The server responds with the new version if successful 
-	OK &lt;version&gt;\r\n
+	The server responds with the new version if successful <br/>
+	OK &lt;version&gt;\r\n<br/>
 
-4.	Delete file
-	delete &lt;filename&gt;\r\n
+4.	Delete file<br/>
+	delete &lt;filename&gt;\r\n<br/>
 	
-	The server response (if successful)
+	The server response (if successful)<br/>
 	OK\r\n
 
 #Errors
