@@ -3,7 +3,6 @@ package main
 import (
 	"bufio"
 	"errors"
-	"fmt"
 	"io"
 	"log"
 	"net"
@@ -35,7 +34,7 @@ func parser(cmd string) (command_meta, error) {
 	command_split := strings.Split(cmd, " ")
 	cobj.operation = command_split[0]
 	err := errors.New("ERR_CMD_ERR\r\n")
-	num_err := errors.New("ERR_NON_NUMERIC_CONTENT")
+	num_err := errors.New("ERR_INTERNAL\r\n")
 	no_of_param := len(command_split)
 
 	switch command_split[0] {
@@ -44,8 +43,7 @@ func parser(cmd string) (command_meta, error) {
 			cobj.filename = command_split[1]
 			nbytes, err1 := strconv.Atoi(command_split[2])
 			if err1 != nil {
-				log.Println(err1)
-				fmt.Println("nbytes error")
+				//log.Println(err1)
 				return cobj, num_err
 			}
 			cobj.numbytes = nbytes
@@ -53,8 +51,7 @@ func parser(cmd string) (command_meta, error) {
 			if len(command_split) == 4 {
 				exp, err2 := strconv.Atoi(command_split[3])
 				if err2 != nil {
-					log.Println(err2)
-					fmt.Println("exp error")
+					//log.Println(err2)
 					return cobj, num_err
 				}
 				cobj.expiry = exp
@@ -62,7 +59,6 @@ func parser(cmd string) (command_meta, error) {
 			cobj.create_time = int(time.Now().Unix())
 
 		} else {
-			fmt.Println("more parameters or less parameters")
 			return cobj, err
 		}
 
@@ -75,24 +71,24 @@ func parser(cmd string) (command_meta, error) {
 		}
 
 	case "cas":
-		if no_of_param == 5 || no_of_param == 6 {
+		if no_of_param == 4 || no_of_param == 5 {
 			cobj.filename = command_split[1]
 			ver, err1 := strconv.Atoi(command_split[2])
 			if err1 != nil {
-				log.Println(err1)
+				//log.Println(err1)
 				return cobj, num_err
 			}
 			cobj.version = int64(ver)
 			nbytes, err2 := strconv.Atoi(command_split[3])
 			if err2 != nil {
-				log.Println(err2)
+				//log.Println(err2)
 				return cobj, num_err
 			}
 			cobj.numbytes = nbytes
 			if len(command_split) == 5 {
 				exp, err3 := strconv.Atoi(command_split[4])
 				if err3 != nil {
-					log.Println(err3)
+					//log.Println(err3)
 					return cobj, num_err
 				}
 				cobj.expiry = exp
@@ -143,22 +139,17 @@ func write(parsed_comm command_meta, ver int64, conn net.Conn, addr net.Addr) {
 
 func handleConnection(conn net.Conn) {
 	addr := conn.RemoteAddr()
-	//log.Println(addr, "connected.")
 	reader := bufio.NewReader(conn)
 	var ver int64 = 1
 	for {
-		message, err := reader.ReadString('\n')
-		if err != nil {
-			//log.Println("ERROR reading:")
-			break
-		}
+		message, _ := reader.ReadString('\n')
 
 		message = strings.TrimRight(message, "\r\n")
 		parsed_comm, err := parser(message)
 		if err != nil {
 			s := err.Error()
 			conn.Write([]byte(s + "\r\n"))
-			conn.Close()
+			break
 		} else {
 			switch parsed_comm.operation {
 			case "write":
@@ -178,9 +169,8 @@ func handleConnection(conn net.Conn) {
 				parsed_comm.data = string(buffer)
 
 				if (strings.TrimRight(extra_data, "\r\n") != "") || (len(parsed_comm.data) != parsed_comm.numbytes) {
-					log.Println("ERR_IN_CMD\r\n")
+					//log.Println("ERR_IN_CMD\r\n")
 					conn.Write([]byte("ERR_IN_CMD\r\n"))
-					//conn.Close()
 					break
 				}
 				write(parsed_comm, ver, conn, addr)
@@ -197,7 +187,6 @@ func handleConnection(conn net.Conn) {
 					if t != 0 && t > 0 {
 						elapsed := int(time.Now().Unix()) - obj.create_time
 						rem = t - elapsed
-						//fmt.Println("rem time is:",rem)
 						if rem <= t && rem > 0 {
 							//log.Println("new expiry time is:",rem)
 						} else {
@@ -213,13 +202,13 @@ func handleConnection(conn net.Conn) {
 					_, err := conn.Write([]byte("CONTENTS " + strconv.Itoa(int(obj.version)) + " " + strconv.Itoa(obj.numbytes) + " " +
 						strconv.Itoa(rem) + " " + "\r\n" + obj.data + "\r\n"))
 					if err != nil {
-						fmt.Println(err)
+						log.Println(err)
 					}
 				} else {
 					kvmanager.RUnlock()
 					_, err := conn.Write([]byte("ERR_FILE_NOT_FOUND\r\n"))
 					if err != nil {
-						fmt.Println(err)
+						log.Println(err)
 					}
 				}
 				break
@@ -235,12 +224,10 @@ func handleConnection(conn net.Conn) {
 						if t != 0 {
 							elapsed := int(time.Now().Unix()) - obj.create_time
 							rem = t - elapsed
-							//fmt.Println("rem time is:",rem)
 							if rem <= t && rem > 0 {
 								kvmanager.Lock()
 								kvmanager.kv[parsed_comm.filename].create_time = int(time.Now().Unix())
 								kvmanager.Unlock()
-								// fmt.Println("new expiry time is:",rem)
 							} else {
 								//delete expired file
 								kvmanager.Lock()
@@ -272,8 +259,8 @@ func handleConnection(conn net.Conn) {
 						parsed_comm.version = ver
 
 						if (strings.TrimRight(extra_data, "\r\n") != "") || (len(parsed_comm.data) != parsed_comm.numbytes) {
-							conn.Write([]byte("ERR_IN_CMD\r\n"))
-							//conn.Close()
+							conn.Write([]byte("ERR_CMD_ERR\r\n"))
+							break
 						}
 
 						kvmanager.Lock()
@@ -294,7 +281,9 @@ func handleConnection(conn net.Conn) {
 				} else {
 					kvmanager.RUnlock()
 					_, err := conn.Write([]byte("ERR_FILE_NOT_FOUND\r\n"))
-					fmt.Println(err)
+					if err != nil {
+						log.Println(err)
+					}
 				}
 				break
 
@@ -308,12 +297,12 @@ func handleConnection(conn net.Conn) {
 					kvmanager.Unlock()
 					_, err := conn.Write([]byte("OK\r\n"))
 					if err != nil {
-						fmt.Println(err)
+						log.Println(err)
 					}
 				} else {
 					_, err := conn.Write([]byte("ERR_FILE_NOT_FOUND\r\n"))
 					if err != nil {
-						fmt.Println(err)
+						log.Println(err)
 					}
 				}
 				break
@@ -331,7 +320,7 @@ func serverMain() {
 
 	tcpAddr, err := net.ResolveTCPAddr("tcp", ":8080")
 	if err != nil {
-		fmt.Println(err)
+		log.Println(err)
 	}
 
 	for {
@@ -339,7 +328,6 @@ func serverMain() {
 		if list_err != nil {
 			log.Println(list_err)
 		} else {
-
 			break
 		}
 	}

@@ -8,8 +8,6 @@ import (
 	"strings"
 	"testing"
 	"time"
-	//"errors"
-	//"regexp"
 )
 
 func TestMain(t *testing.T) {
@@ -66,7 +64,6 @@ func TestExpiry(t *testing.T) {
 	if err != nil {
 		t.Error(err.Error()) // report error through testing framework
 	}
-
 	scanner := bufio.NewScanner(conn)
 	// Write a file
 	fmt.Fprintf(conn, "write %v %v %v\r\n%v\r\n", name, len(contents), exptime, contents)
@@ -78,7 +75,6 @@ func TestExpiry(t *testing.T) {
 	if err != nil {
 		t.Error("Non-numeric version %v found", ver)
 	}
-
 	time.Sleep(5 * time.Second) //wait till file content gets expired
 
 	fmt.Fprintf(conn, "read %v\r\n", name) // try a read now
