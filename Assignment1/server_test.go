@@ -19,7 +19,6 @@ func TestMain(t *testing.T) {
 
 // Simple serial check of getting and setting
 func TestTCPSimple(t *testing.T) {
-	//go serverMain()
 	name := "hi.txt"
 	contents := "bye"
 	exptime := 300000

@@ -1,30 +1,41 @@
 # CS733
 Versioned File Server
 ##Installation
-##Specification
+##Command Specification
 1.	Write: create a file, or update the file’s contents if it already exists.
+	
 	write <filename> <numbytes> [<exptime>]\r\n
 	<content bytes>\r\n
 	
 	The server responds with the following:
+	
 	OK <version>\r\n
+
 2.	Read: Given a filename, retrieve the corresponding file:
+	
 	read <filename>\r\n
 	
 	The server responds with the following format (or one of the errors described later)
+	
 	CONTENTS <version> <numbytes> <exptime> \r\n
 	<content bytes>\r\n
+
 3.	Compare and swap. This replaces the old file contents with the new content
 	provided the version is still the same.
+	
 	cas <filename> <version> <numbytes> [<exptime>]\r\n
 	<content bytes>\r\n
 	
 	The server responds with the new version if successful 
+	
 	OK <version>\r\n
+
 4.	Delete file
+	
 	delete <filename>\r\n
 	
 	The server response (if successful)
+	
 	OK\r\n
 
 ##Errors
