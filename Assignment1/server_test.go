@@ -12,7 +12,6 @@ import (
 	//"regexp"
 )
 
-
 func TestMain(t *testing.T) {
 	go serverMain() // launch the server as a goroutine.
 	time.Sleep(1 * time.Second)
@@ -78,10 +77,10 @@ func TestExpiry(t *testing.T) {
 	expect(t, arr[0], "OK")
 	ver, err := strconv.Atoi(arr[1]) // parse version as number
 	if err != nil {
-		t.Error("Non-numeric version %v found",ver)
+		t.Error("Non-numeric version %v found", ver)
 	}
 
-	time.Sleep(5 * time.Second)//wait till file content gets expired
+	time.Sleep(5 * time.Second) //wait till file content gets expired
 
 	fmt.Fprintf(conn, "read %v\r\n", name) // try a read now
 	scanner.Scan()
@@ -129,7 +128,7 @@ func CreateClient(t *testing.T, k int, ack chan<- bool, id int) {
 
 	scanner := bufio.NewScanner(conn)
 	for j := 1; j < k; j++ {
-			// Write a file
+		// Write a file
 		fmt.Fprintf(conn, "write %v %v %v\r\n%v\r\n", name, len(contents), exptime, contents)
 		scanner.Scan()                  // read first line
 		resp := scanner.Text()          // extract the text from the buffer
@@ -137,7 +136,7 @@ func CreateClient(t *testing.T, k int, ack chan<- bool, id int) {
 		expect(t, arr[0], "OK")
 		ver, err := strconv.Atoi(arr[1]) // parse version as number
 		if err != nil {
-			t.Error("Non-numeric version %v found",ver)
+			t.Error("Non-numeric version %v found", ver)
 		}
 	}
 	conn.Close()
@@ -162,44 +161,42 @@ func TestMiscellaneous(t *testing.T) {
 	expect(t, arr[0], "OK")
 	ver, err := strconv.Atoi(arr[1]) // parse version as number
 	if err != nil {
-		t.Error("Non-numeric version %v found",ver)
+		t.Error("Non-numeric version %v found", ver)
 	}
 	version := int64(ver)
-	
+
 	//checking correctness of the cas command
-	fmt.Fprintf(conn, "cas %v %v %v %v\r\n%v\r\n", name,version, len(contents), exptime, contents)
-	scanner.Scan()                  // read first line
-	resp  = scanner.Text()          // extract the text from the buffer
-	arr   = strings.Split(resp, " ") // split into OK and <version>
+	fmt.Fprintf(conn, "cas %v %v %v %v\r\n%v\r\n", name, version, len(contents), exptime, contents)
+	scanner.Scan()                 // read first line
+	resp = scanner.Text()          // extract the text from the buffer
+	arr = strings.Split(resp, " ") // split into OK and <version>
 	expect(t, arr[0], "OK")
 	ver, err = strconv.Atoi(arr[1]) // parse version as number
 	if err != nil {
-		t.Error("Non-numeric version %v found",ver)
+		t.Error("Non-numeric version %v found", ver)
 	}
 	version = version + 1
 	expect(t, arr[1], strconv.Itoa(int(version)))
 
-
-	//checking correctness of delete operation 
+	//checking correctness of delete operation
 	fmt.Fprintf(conn, "delete %v\r\n", name)
-	scanner.Scan()                  // read first line
-	resp  = scanner.Text()          // extract the text from the buffer
-	arr   = strings.Split(resp, " ") 
-	expect(t,arr[0],"OK")
+	scanner.Scan()        // read first line
+	resp = scanner.Text() // extract the text from the buffer
+	arr = strings.Split(resp, " ")
+	expect(t, arr[0], "OK")
 
 	//checking read operation correctness
 	fmt.Fprintf(conn, "read %v\r\n", name)
-	scanner.Scan()                  // read first line
-	resp  = scanner.Text()          // extract the text from the buffer
-	arr   = strings.Split(resp, " ") 
-	expect(t,arr[0],"ERR_FILE_NOT_FOUND")
+	scanner.Scan()        // read first line
+	resp = scanner.Text() // extract the text from the buffer
+	arr = strings.Split(resp, " ")
+	expect(t, arr[0], "ERR_FILE_NOT_FOUND")
 
 	//checking invalid no of arguments in cas command
-	fmt.Fprintf(conn, "cas %v %v \r\n%v\r\n", name,version, contents)
-	scanner.Scan()                  // read first line
-	resp  = scanner.Text()          // extract the text from the buffer
-	arr   = strings.Split(resp, " ") 
-	expect(t,arr[0],"ERR_CMD_ERR")
+	fmt.Fprintf(conn, "cas %v %v \r\n%v\r\n", name, version, contents)
+	scanner.Scan()        // read first line
+	resp = scanner.Text() // extract the text from the buffer
+	arr = strings.Split(resp, " ")
+	expect(t, arr[0], "ERR_CMD_ERR")
 
-	
 }
