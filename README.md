@@ -9,7 +9,7 @@ Versioned File Server
 3.Run the test script using : go test
 
 #Command Specification
-1.	Write: create a file, or update the file’s contents if it already exists.
+1.	Write: create a file, or update the file’s contents if it already exists. <br/>
 	write &lt;filename&gt; &lt;numbytes&gt; [&lt;exptime&gt;]\r\n	
     	&lt;content bytes&gt;\r\n
 
