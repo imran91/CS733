@@ -187,11 +187,4 @@ func TestMiscellaneous(t *testing.T) {
 	arr = strings.Split(resp, " ")
 	expect(t, arr[0], "ERR_FILE_NOT_FOUND")
 
-	//checking invalid no of arguments in cas command
-	fmt.Fprintf(conn, "cas %v %v \r\n%v\r\n", name, version, contents)
-	scanner.Scan()        // read first line
-	resp = scanner.Text() // extract the text from the buffer
-	arr = strings.Split(resp, " ")
-	expect(t, arr[0], "ERR_CMD_ERR")
-
 }
