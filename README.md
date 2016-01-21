@@ -10,7 +10,7 @@ Versioned File Server
 
 #Command Specification
 1.	Write: create a file, or update the file’s contents if it already exists.
-	write <filename> <numbytes> [<exptime>]\r\n
+	write &lt;filename> <numbytes> [<exptime>]\r\n
     <content bytes>\r\n
 
 	The server responds with the following:	
