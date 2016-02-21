@@ -11,12 +11,13 @@ func handleFollowerTimeout(sm *StateMachine,cmd *Timeout) []interface{}{
 	sm.state = 2
 	sm.term = sm.term + 1
 	sm.votedFor = -1
-	sm.votedAs = make(map[int]int)
 	actions = append(actions,StateStore{currTerm:sm.term,votedFor:sm.votedFor})
 
+	sm.votedAs = make(map[int]int)
 	for i:=0; i<totalServers;i++{
 		sm.votedAs[i] = 0
 	}
+	
 	sm.votedAs[sm.id] = 1//self vote
 	sm.votedFor = sm.id
 	actions = append(actions,StateStore{currTerm:sm.term,votedFor:sm.votedFor})

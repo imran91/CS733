@@ -38,6 +38,5 @@ func handleLeaderAppend(sm *StateMachine,cmd *Append) []interface{}{
 				//add here
 			}
 	}
-
 	return actions
 }

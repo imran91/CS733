@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"testing"
 	"strconv"
+//	"reflect"
 )
 
 func exampleInitialise(sm []StateMachine){
@@ -28,24 +29,38 @@ func exampleInitialise(sm []StateMachine){
 
 	sm[0].log[0].term = 1
 	sm[0].log[0].command = []byte{'r','e','a','d'}
+	
+	sm[0].log[1].term = 1
+	sm[0].log[1].command = []byte{'w','r','i','t','e'}
+	
+	sm[0].log[1].term = 2
+	sm[0].log[1].command = []byte{'r','e','a','d'}
+
+	sm[0].commitIndex = 1
+	sm[0].lastLogIndex = 3
+
+	sm[0].matchIndex[0] = 1
+	sm[0].matchIndex[1] = 1
 }
 
-func TestAppend(t *testing.T){
+func TestLeaderAppend(t *testing.T){
 		
 	var sm []StateMachine
 	sm = make([]StateMachine,3)
 	exampleInitialise(sm[:])
 
 	a := sm[0].ProcessEvent(Append{data:sm[0].log[0].command})
-
-	numSend := 0
+	numAppendEntryReq := 0
 	numLogStore := 0
 	numUnexpectedEv := 0
 
 	for i:=0; i<len(a); i++ {
-			_,ok := a[i].(Send)
+			f,ok := a[i].(Send)
 			if ok{
-				numSend++
+				_,yes := f.event.(AppendEntriesReqEv)
+				if yes{
+					numAppendEntryReq++	
+				}
 			} else{
 					_,ok := a[i].(LogStore)
 					if ok {
@@ -53,15 +68,21 @@ func TestAppend(t *testing.T){
 					} else {
 						numUnexpectedEv++
 					}
-
 			}
 	}
-	expect(t,strconv.Itoa(numSend),strconv.Itoa(len(sm[0].peers)))
+
+	expect(t,strconv.Itoa(numAppendEntryReq),strconv.Itoa(len(sm[0].peers)))
 	expect(t,strconv.Itoa(numLogStore),"1")
 	expect(t,strconv.Itoa(numUnexpectedEv),"0")
 	
 }
+func TestLeaderAppendEntryReq(t *testing.T){
 
+}
+
+func TestLeaderHeartBeat(t *testing.T){
+
+}
 
 func expect(t *testing.T, a string, b string) {
 	if a != b {
