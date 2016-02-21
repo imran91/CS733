@@ -31,7 +31,9 @@ func handleFollowerAppendEntryReq(sm *StateMachine,cmd *AppendEntriesReqEv) []in
 	sm.lastLogIndex = cmd.prevLogIndex + len(cmd.entries)
 	sm.lastLogTerm = sm.log[sm.lastLogIndex].term
 	sm.commitIndex = int(math.Min(float64(sm.lastLogIndex),float64(cmd.senderCommitIndex)))
-	actions = append(actions,Commit{index:sm.commitIndex,leaderId:sm.leaderId,data:cmd.data,err:nil})
+
+	actions = append(actions,Commit{index:sm.commitIndex,leaderId:sm.leaderId,data:sm.log[sm.commitIndex].command,err:nil})
+	
 	actions = append(actions,Send{peerId:cmd.senderId,event:AppendEntriesRespEv{senderId: sm.id , senderTerm: sm.term, response:true,lastMatchIndex:sm.commitIndex}})
 	return actions
 }
@@ -62,7 +64,7 @@ func handleCandidateAppendEntryReq(sm *StateMachine,cmd *AppendEntriesReqEv) []i
 	sm.lastLogIndex = cmd.prevLogIndex + len(cmd.entries)
 	sm.lastLogTerm = sm.log[sm.lastLogIndex].term
 	sm.commitIndex = int(math.Min(float64(sm.lastLogIndex),float64(cmd.senderCommitIndex)))
-	actions = append(actions,Commit{index:sm.commitIndex,leaderId:sm.leaderId,data:cmd.data,err:nil})
+	actions = append(actions,Commit{index:sm.commitIndex,leaderId:sm.leaderId,data:sm.log[sm.commitIndex].command,err:nil})
 	actions = append(actions,Send{peerId:cmd.senderId,event:AppendEntriesRespEv{senderId: sm.id , senderTerm: sm.term, response:true,lastMatchIndex:sm.commitIndex}})
 	return actions
 }
@@ -94,7 +96,7 @@ func handleLeaderAppendEntryReq(sm *StateMachine,cmd *AppendEntriesReqEv) []inte
 	sm.lastLogIndex = cmd.prevLogIndex + len(cmd.entries)
 	sm.lastLogTerm = sm.log[sm.lastLogIndex].term
 	sm.commitIndex = int(math.Min(float64(sm.lastLogIndex),float64(cmd.senderCommitIndex)))
-	actions = append(actions,Commit{index:sm.commitIndex,leaderId:sm.leaderId,data:cmd.data,err:nil})
+	actions = append(actions,Commit{index:sm.commitIndex,leaderId:sm.leaderId,data:sm.log[sm.commitIndex].command,err:nil})
 	actions = append(actions,Send{peerId:cmd.senderId,event:AppendEntriesRespEv{senderId: sm.id , senderTerm: sm.term, response:true,lastMatchIndex:sm.commitIndex}})
 
 	return actions

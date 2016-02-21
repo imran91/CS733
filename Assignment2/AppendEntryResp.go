@@ -32,7 +32,7 @@ func handleLeaderAppendEntryResp(sm *StateMachine,cmd *AppendEntriesRespEv) []in
 
 		isCommited := checkCommit(sm.matchIndex,cmd.senderId,&sm.commitIndex,sm.peers,sm.log,sm.term)
 		if isCommited{
-				actions = append(actions,Commit{index:sm.commitIndex,leaderId:sm.leaderId,data:cmd.data,err:nil})
+				actions = append(actions,Commit{index:sm.commitIndex,leaderId:sm.leaderId,data:sm.log[sm.commitIndex].command,err:nil})
 			}
 	}else {
 
