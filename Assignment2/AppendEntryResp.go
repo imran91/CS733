@@ -28,10 +28,12 @@ func handleLeaderAppendEntryResp(sm *StateMachine,cmd *AppendEntriesRespEv) []in
 
 	if cmd.response == true {
 
-		
 		sm.matchIndex[cmd.senderId] = cmd.lastMatchIndex
 
-		checkCommit(sm.matchIndex,cmd.senderId,&sm.commitIndex,sm.peers,sm.log,sm.term)
+		isCommited := checkCommit(sm.matchIndex,cmd.senderId,&sm.commitIndex,sm.peers,sm.log,sm.term)
+		if isCommited{
+				actions = append(actions,Commit{index:sm.commitIndex,leaderId:sm.leaderId,data:cmd.data,err:nil})
+			}
 	}else {
 
 		prevLogIndex := sm.nextIndex[cmd.senderId]-1
@@ -55,7 +57,7 @@ func handleLeaderAppendEntryResp(sm *StateMachine,cmd *AppendEntriesRespEv) []in
 	return actions
 }
 
-func checkCommit(matchIndex []int,senderId int,commitIndex *int,peers []int,log []Log,term int){
+func checkCommit(matchIndex []int,senderId int,commitIndex *int,peers []int,log []Log,term int) bool{
 	cnt :=0
 	var k int
 	for j := matchIndex[senderId]; j > *commitIndex; j-- {
@@ -66,9 +68,10 @@ func checkCommit(matchIndex []int,senderId int,commitIndex *int,peers []int,log 
 		}
 		if (cnt > (len(peers)+1)/2) && log[j].term == term {
 			*commitIndex = j
+			return true
 			break
 		}
 		cnt =0
 	}
-
+	return false
 }
