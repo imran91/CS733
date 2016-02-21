@@ -17,22 +17,27 @@ func handleCandidateAppend(sm *StateMachine,cmd *Append) []interface{}{
 }
 
 func handleLeaderAppend(sm *StateMachine,cmd *Append) []interface{}{
+	var temp []Log
+	temp = make([]Log,1)
 	sm.lastLogIndex = sm.lastLogIndex+1
 	sm.lastLogTerm = sm.term
-	var temp []Log
 	temp[0].term = sm.term
 	temp[0].command = cmd.data
-	actions = append(actions,LogStore{index:sm.lastLogIndex,logEntry:temp})
-
-	for i:=0; i<(len(sm.peers)); i++ {
-			prevLogIndex := sm.nextIndex[sm.peers[i]]-1
-			prevLogTerm := sm.log[prevLogIndex].term
-			entries := sm.log[sm.nextIndex[sm.peers[i]]:]
-			//sm.sentIndex[sm.peers[i]] = sm.nextIndex[]
-
-			actions = append(actions,Send{peerId:sm.peers[i],event:AppendEntriesReqEv{term : sm.term, senderId: sm.id, prevLogIndex: prevLogIndex, 
-				prevLogTerm: prevLogTerm, entries: entries,senderCommitIndex: sm.commitIndex}})
-	}
 	
+	actions = append(actions,LogStore{index:sm.lastLogIndex,logEntry:temp})
+	
+	for i:=0; i<len(sm.peers); i++ {
+		if sm.nextIndex[i] > 0 {				
+				prevLogIndex := sm.nextIndex[i]-1
+				prevLogTerm := sm.log[prevLogIndex].term
+				entries := sm.log[sm.nextIndex[i]:]
+				//sm.sentIndex[sm.peers[i]] = sm.nextIndex[]
+				actions = append(actions,Send{peerId:sm.peers[i],event:AppendEntriesReqEv{term : sm.term, senderId: sm.id, prevLogIndex: prevLogIndex, 
+					prevLogTerm: prevLogTerm, entries: entries,senderCommitIndex: sm.commitIndex}})
+			} else {
+				//add here
+			}
+	}
+
 	return actions
 }

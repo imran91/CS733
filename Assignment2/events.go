@@ -34,7 +34,6 @@ type VoteRespEv struct{
 	senderId int
 	senderTerm int
 	response bool
-
 }
 
 type Log struct{
