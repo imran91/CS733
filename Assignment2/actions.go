@@ -9,6 +9,7 @@ type Event interface{}
 
 type Commit struct{
 	index int
+	leaderId int
 	data []byte
 	err error
 }

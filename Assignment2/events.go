@@ -20,6 +20,7 @@ type AppendEntriesRespEv struct {
 	senderId int
 	senderTerm int
 	response bool
+	lastMatchIndex int
 }
 
 type VoteReqEv struct {
@@ -30,6 +31,7 @@ type VoteReqEv struct {
 }
 
 type VoteRespEv struct{
+	senderId int
 	senderTerm int
 	response bool
 

@@ -6,12 +6,18 @@ import (
 
 
 func handleFollowerTimeout(sm *StateMachine,cmd *Timeout) []interface{}{
-	
+	var totalServers int
+	totalServers = len(sm.peers)+1
 	sm.state = 2
 	sm.term = sm.term + 1
 
-	//numVotes=1   new logic need to be added
+
+	for i:=0; i<totalServers;i++{
+		sm.votedAs[i] = 0
+	}
+	sm.votedAs[sm.id] = 1//self vote
 	sm.votedFor = sm.id
+	actions = append(actions,StateStore{currTerm:sm.term,votedFor:sm.votedFor})
 	actions = append(actions,Alarm{t:rand.Intn(2*sm.timer-sm.timer)+sm.timer})  //equivalent to random(timer,2*timer)
 
 	for i:=0; i<(len(sm.peers)); i++ {
@@ -23,11 +29,18 @@ func handleFollowerTimeout(sm *StateMachine,cmd *Timeout) []interface{}{
 }
 
 func handleCandidateTimeout(sm *StateMachine,cmd *Timeout) []interface{}{
-	
+	var totalServers int
+	totalServers = len(sm.peers)+1
 	sm.term = sm.term + 1
 
 	//numVotes=1   new logic need to be added
+	for i:=0; i<totalServers;i++{
+		sm.votedAs[i] = 0
+	}
+	sm.votedAs[sm.id] = 1//self vote
+
 	sm.votedFor = sm.id
+	actions = append(actions,StateStore{currTerm:sm.term,votedFor:sm.votedFor})
 	actions = append(actions,Alarm{t:rand.Intn(2*sm.timer-sm.timer)+sm.timer}) 
 
 	for i:=0; i<(len(sm.peers)); i++ {

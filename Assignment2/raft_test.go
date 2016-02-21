@@ -2,11 +2,10 @@ package main
 
 import (
 	"testing"
-	//"fmt"
-	//"math/rand"
 )
 
 func TestAppendEntriesRPC(t *testing.T){
+	
 	//var sm StateMachine
 	/*sm.state = 1
 	z:=sm.ProcessEvent(AppendEntriesReqEv{term : 10, leaderId: 1, prevLogIndex: 100, prevLogTerm: 3, 
@@ -48,9 +47,6 @@ func TestAppendEntriesRPC(t *testing.T){
 	fmt.Printf("%v\n", f)	
 	}*/
 	
-
-
-
 }
 /*
 func TestAppendFollower(t *testing.T){

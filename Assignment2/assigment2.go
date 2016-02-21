@@ -15,7 +15,7 @@ type StateMachine struct {
 	leaderId int
 	nextIndex []int
 	matchIndex []int
-	sentIndex []int
+	votedAs map[int] int 
 	timer int
 }
 
