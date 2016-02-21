@@ -4,6 +4,8 @@ func handleFollowerVoteResp(sm *StateMachine,cmd *VoteRespEv) []interface{}{
 
 	if sm.term < cmd.senderTerm {
 		sm.term = cmd.senderTerm
+		sm.votedFor = -1
+		sm.votedAs = make(map[int]int)
 		actions = append(actions,StateStore{currTerm:sm.term,votedFor:sm.votedFor})
 	}
 
@@ -20,6 +22,8 @@ func handleCandidateVoteResp(sm *StateMachine,cmd *VoteRespEv) []interface{}{
 	totalServers = len(sm.peers)+1
 	if sm.term < cmd.senderTerm {
 		sm.term = cmd.senderTerm
+		sm.votedFor = -1
+		sm.votedAs = make(map[int]int)
 		actions = append(actions,StateStore{currTerm:sm.term,votedFor:sm.votedFor})
 		sm.state = 1
 	}
@@ -63,6 +67,8 @@ func handleCandidateVoteResp(sm *StateMachine,cmd *VoteRespEv) []interface{}{
 func handleLeaderVoteResp(sm *StateMachine,cmd *VoteRespEv) []interface{}{
 	if sm.term < cmd.senderTerm {
 		sm.term = cmd.senderTerm
+		sm.votedFor = -1
+		sm.votedAs = make(map[int]int)
 		actions = append(actions,StateStore{currTerm:sm.term,votedFor:sm.votedFor})
 		sm.state = 1
 	}

@@ -18,36 +18,38 @@ func handleLeaderAppendEntryResp(sm *StateMachine,cmd *AppendEntriesRespEv) []in
 		
 	if sm.term < cmd.senderTerm {
 		sm.state = 1
+		sm.votedFor = -1
+		sm.votedAs = make(map[int]int)
 		sm.term = cmd.senderTerm
 		actions = append(actions,StateStore{currTerm:sm.term,votedFor:sm.votedFor})
 		return actions
 	}
+	sm.nextIndex[cmd.senderId] = cmd.lastMatchIndex + 1
 
 	if cmd.response == true {
 
-		sm.nextIndex[cmd.senderId] = cmd.lastMatchIndex + 1
+		
 		sm.matchIndex[cmd.senderId] = cmd.lastMatchIndex
 
 		checkCommit(sm.matchIndex,cmd.senderId,&sm.commitIndex,sm.peers,sm.log,sm.term)
 	}else {
 
-		sm.nextIndex[cmd.senderId] = cmd.lastMatchIndex + 1
 		prevLogIndex := sm.nextIndex[cmd.senderId]-1
 		prevLogTerm := sm.log[prevLogIndex].term
 		entries := sm.log[sm.nextIndex[cmd.senderId]:sm.lastLogIndex]
 
 		actions = append(actions,Send{peerId:cmd.senderId,event:AppendEntriesReqEv{term : sm.term, senderId: sm.id, prevLogIndex: prevLogIndex, 
 				prevLogTerm: prevLogTerm, entries: entries,senderCommitIndex: sm.commitIndex}})		
-	}
-
-	if sm.lastLogIndex > sm.matchIndex[cmd.senderId]{
-		prevLogIndex := sm.nextIndex[cmd.senderId]-1
-		prevLogTerm := sm.log[prevLogIndex].term
-		entries := sm.log[sm.nextIndex[cmd.senderId]:sm.lastLogIndex]
-		//sm.sentIndex[cmd.senderId] = sm.lastLogIndex
-
-		actions = append(actions,Send{peerId:cmd.senderId,event:AppendEntriesReqEv{term : sm.term, senderId: sm.id, prevLogIndex: prevLogIndex, 
-				prevLogTerm: prevLogTerm, entries: entries,senderCommitIndex: sm.commitIndex}})		
+	
+		if sm.lastLogIndex > sm.matchIndex[cmd.senderId]{
+			prevLogIndex := sm.nextIndex[cmd.senderId]-1
+			prevLogTerm := sm.log[prevLogIndex].term
+			entries := sm.log[sm.nextIndex[cmd.senderId]:sm.lastLogIndex]
+			//sm.sentIndex[cmd.senderId] = sm.lastLogIndex
+	
+			actions = append(actions,Send{peerId:cmd.senderId,event:AppendEntriesReqEv{term : sm.term, senderId: sm.id, prevLogIndex: prevLogIndex, 
+					prevLogTerm: prevLogTerm, entries: entries,senderCommitIndex: sm.commitIndex}})		
+		}
 	}
 
 	return actions
