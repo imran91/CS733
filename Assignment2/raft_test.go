@@ -52,9 +52,6 @@ func exampleInitialise(sm []StateMachine){
 	sm[1].commitIndex = 0
 	sm[2].commitIndex = 0
 	sm[0].lastLogIndex = 2
-	sm[1].lastLogIndex = 0
-	sm[2].lastLogIndex = 0
-
 
 	sm[0].matchIndex[0] = 0
 	sm[0].matchIndex[1] = 0
@@ -105,34 +102,69 @@ func TestAppendEntryReqFollowerEv(t *testing.T){
 			entries: []Log (sm[0].log[sm[0].commitIndex:sm[0].lastLogIndex+1]),senderCommitIndex:1})
 	
 	lastIndex = giveIndexOfEvent(a,4)  //Check data need to store on follower side for LogStore
-	if lastIndex > 0 {
+	if lastIndex >= 0 {
 		expected,_ := json.Marshal(sm[0].log[sm[0].commitIndex:sm[0].lastLogIndex+1])
 		actual,_ := json.Marshal(a[lastIndex].(LogStore).logEntry)
 		expect(t,string(actual),string(expected))
 	}
 		
 	lastIndex = giveIndexOfEvent(a,5)  //StateStore expected to update currTerm from 1 to 2
-	if lastIndex > 0 {
+	if lastIndex >= 0 {
 		expect(t,strconv.Itoa(a[lastIndex].(StateStore).currTerm),"2")
 	}
 
 	lastIndex = giveIndexOfEvent(a,2)  //Check Commit Index is updated on follower
-	if lastIndex > 0 {
+	if lastIndex >= 0 {
 		expect(t,strconv.Itoa(a[lastIndex].(Commit).index),"1")
 	}
 }
 
 func TestAppendEntryRespLeaderEv(t *testing.T){
-	/*var sm []StateMachine
+	var sm []StateMachine
 	var lastIndex int
 	lastIndex = -1
 	sm = make([]StateMachine,3)
 	exampleInitialise(sm[:])
 
+	sm[1].log[1].term = 1
+	sm[1].log[1].command = []byte{'w','r','i','t','e'}
+	
+	sm[1].log[2].term = 2
+	sm[1].log[2].command = []byte{'r','e','a','d'}
+
+	sm[1].lastLogIndex = 2
+	
 	a:=sm[0].ProcessEvent(AppendEntriesRespEv{senderId: 2, senderTerm: 2, response:true, lastMatchIndex:2})
-	lastIndex = giveIndexOfEvent(a,4)  //Check data need to store on follower side for LogStore
-	if lastIndex > 0 {
-	}*/
+	lastIndex = giveIndexOfEvent(a,4)  //Check commit index and data is updated in Commit action
+	if lastIndex >= 0 {
+		expect(t,strconv.Itoa(a[lastIndex].(Commit).index),"2")
+		actual,_ := json.Marshal(a[lastIndex].(Commit).data)
+		expected,_ := json.Marshal(sm[0].log)
+		expect(t,string(actual),string(expected))
+	}
+
+
+	a =sm[0].ProcessEvent(AppendEntriesRespEv{senderId: 3, senderTerm: 1, response:false, lastMatchIndex:0})
+	lastIndex = giveIndexOfEvent(a,1)  //Check Append Entry request is sent
+	numAppendEntryReq := 0
+	numUnexpectedEv := 0
+
+	if lastIndex >=0 {
+		for i:=0; i<len(a); i++ {
+				f,ok := a[i].(Send)
+				if ok{
+					_,yes := f.event.(AppendEntriesReqEv)
+					if yes{
+						numAppendEntryReq++	
+					}
+				}  else {
+							numUnexpectedEv++
+						}
+			}
+		expect(t,strconv.Itoa(numAppendEntryReq),"1")
+		expect(t,strconv.Itoa(numUnexpectedEv),"0")
+
+	}
 }
 
 func giveIndexOfEvent(a []interface{},event int) int{
