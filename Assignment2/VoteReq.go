@@ -33,7 +33,7 @@ func handleCandidateVoteReq(sm *StateMachine,cmd *VoteReqEv) []interface{}{
 		sm.state = 1
 		sm.term = cmd.term
 		sm.votedFor = -1
-		sm.votedAs = make([]int,len(sm.peers))
+		sm.votedAs = make([]int,len(sm.peers)+1)
 		actions = append(actions,StateStore{currTerm:sm.term,votedFor:sm.votedFor})
 
 		if (sm.lastLogTerm > cmd.lastLogTerm) || ((sm.lastLogTerm == cmd.lastLogTerm) && sm.lastLogIndex > cmd.lastLogIndex){
@@ -57,7 +57,7 @@ func handleLeaderVoteReq(sm *StateMachine,cmd *VoteReqEv) []interface{}{
 		sm.state = 1
 		sm.term = cmd.term
 		sm.votedFor = -1
-		sm.votedAs = make([]int,len(sm.peers))
+		sm.votedAs = make([]int,len(sm.peers)+1)
 		actions = append(actions,StateStore{currTerm:sm.term,votedFor:sm.votedFor})
 
 		if (sm.lastLogTerm > cmd.lastLogTerm) || ((sm.lastLogTerm == cmd.lastLogTerm) && sm.lastLogIndex > cmd.lastLogIndex){

@@ -20,7 +20,7 @@ func handleLeaderAppendEntryResp(sm *StateMachine,cmd *AppendEntriesRespEv) []in
 	if sm.term < cmd.senderTerm {
 		sm.state = 1
 		sm.votedFor = -1
-		sm.votedAs = make([]int,len(sm.peers))
+		sm.votedAs = make([]int,len(sm.peers)+1)
 		sm.term = cmd.senderTerm
 		actions = append(actions,StateStore{currTerm:sm.term,votedFor:sm.votedFor})
 		return actions

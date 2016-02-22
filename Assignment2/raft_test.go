@@ -21,6 +21,7 @@ func exampleInitialise(sm []StateMachine){
 	for i:=0; i<len(sm); i++ {
 		sm[i].log = make([]Log,5)		
 		sm[i].matchIndex = make([]int,2)
+		sm[i].votedAs = make([]int,2)
 	}
 
 	sm[0].nextIndex = []int{1,1}
@@ -143,7 +144,6 @@ func TestAppendEntryRespLeaderEv(t *testing.T){
 		expect(t,string(actual),string(expected))
 	}
 
-
 	a =sm[0].ProcessEvent(AppendEntriesRespEv{senderId: 3, senderTerm: 1, response:false, lastMatchIndex:0})
 	lastIndex = giveIndexOfEvent(a,1)  //Check Append Entry request is sent
 	numAppendEntryReq := 0
@@ -165,6 +165,125 @@ func TestAppendEntryRespLeaderEv(t *testing.T){
 		expect(t,strconv.Itoa(numUnexpectedEv),"0")
 
 	}
+}
+
+
+func TestTimeoutFollower(t *testing.T){
+	var sm []StateMachine
+	sm = make([]StateMachine,3)
+	exampleInitialise(sm[:])
+
+	a := sm[1].ProcessEvent(Timeout{})
+	expect(t,strconv.Itoa(sm[1].state),"2")		//state is changed to candidate
+	numVoteReq := 0
+	numAlarm := 0
+	numStateStore :=0
+	numUnexpectedEv := 0
+
+	for i:=0; i<len(a); i++ {
+			f,ok := a[i].(Send)
+			if ok{
+				_,yes := f.event.(VoteReqEv)
+				if yes{
+					numVoteReq++	
+				}
+			} else{
+					_,ok := a[i].(StateStore)
+					if ok {
+						numStateStore++
+					} else {
+						_,ok := a[i].(Alarm)
+						if ok{
+								numAlarm++
+						} else {
+							numUnexpectedEv++
+						}
+					}
+			}
+	}
+
+	expect(t,strconv.Itoa(numVoteReq),strconv.Itoa(len(sm[0].peers)))
+	expect(t,strconv.Itoa(numStateStore),"2")
+	expect(t,strconv.Itoa(numAlarm),"1")
+	expect(t,strconv.Itoa(numUnexpectedEv),"0")
+
+}
+
+func TestTimeoutCandidate(t *testing.T){
+	var sm []StateMachine
+	sm = make([]StateMachine,3)
+	exampleInitialise(sm[:])
+
+	sm[1].state = 2 //Candidate
+	a := sm[1].ProcessEvent(Timeout{})
+	expect(t,strconv.Itoa(sm[1].state),"2")		//Candidate should not change state after timeout
+	numVoteReq := 0
+	numAlarm := 0
+	numStateStore :=0
+	numUnexpectedEv := 0
+
+	for i:=0; i<len(a); i++ {
+			f,ok := a[i].(Send)
+			if ok{
+				_,yes := f.event.(VoteReqEv)
+				if yes{
+					numVoteReq++	
+				}
+			} else{
+					_,ok := a[i].(StateStore)
+					if ok {
+						numStateStore++
+					} else {
+						_,ok := a[i].(Alarm)
+						if ok{
+								numAlarm++
+						} else {
+							numUnexpectedEv++
+						}
+					}
+			}
+	}
+
+	expect(t,strconv.Itoa(numVoteReq),strconv.Itoa(len(sm[0].peers)))
+	expect(t,strconv.Itoa(numStateStore),"2")
+	expect(t,strconv.Itoa(numAlarm),"1")
+	expect(t,strconv.Itoa(numUnexpectedEv),"0")
+
+}
+
+func TestTimeoutLeader(t *testing.T){
+	var sm []StateMachine
+	sm = make([]StateMachine,3)
+	exampleInitialise(sm[:])
+
+	a := sm[0].ProcessEvent(Timeout{})
+	expect(t,strconv.Itoa(sm[0].state),"3")		//Leader should not change state after timeout
+
+	numAppendEntryReq := 0
+	numAlarm := 0
+	numUnexpectedEv := 0
+
+	for i:=0; i<len(a); i++ {
+			f,ok := a[i].(Send)
+			if ok{
+				_,yes := f.event.(AppendEntriesReqEv)
+				if yes{
+					numAppendEntryReq++	
+				} 
+			}  else {
+						_,ok := a[i].(Alarm)
+						if ok {
+							numAlarm++	
+						} else {
+							numUnexpectedEv++
+						}
+					}
+		}
+
+	expect(t,strconv.Itoa(numAppendEntryReq),strconv.Itoa(len(sm[0].peers))) //no of heart beat msgs
+	expect(t,strconv.Itoa(numAlarm),"1")
+	expect(t,strconv.Itoa(numUnexpectedEv),"0")
+
 }
 
 func giveIndexOfEvent(a []interface{},event int) int{
