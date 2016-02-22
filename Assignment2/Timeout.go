@@ -14,7 +14,7 @@ func handleFollowerTimeout(sm *StateMachine,cmd *Timeout) []interface{}{
 	sm.votedFor = -1
 	actions = append(actions,StateStore{currTerm:sm.term,votedFor:sm.votedFor})
 
-	sm.votedAs = make(map[int]int)
+	sm.votedAs = make([]int,len(sm.peers))
 	for i:=0; i<totalServers;i++{
 		sm.votedAs[i] = 0
 	}
@@ -38,7 +38,7 @@ func handleCandidateTimeout(sm *StateMachine,cmd *Timeout) []interface{}{
 	totalServers = len(sm.peers)+1
 	sm.term = sm.term + 1
 	sm.votedFor = -1
-	sm.votedAs = make(map[int]int)
+	sm.votedAs = make([]int,len(sm.peers))
 	actions = append(actions,StateStore{currTerm:sm.term,votedFor:sm.votedFor})
 	//numVotes=1   new logic need to be added
 	for i:=0; i<totalServers;i++{

@@ -16,7 +16,7 @@ func handleFollowerAppendEntryReq(sm *StateMachine,cmd *AppendEntriesReqEv) []in
 
 	sm.term = cmd.term
 	sm.votedFor = -1
-	sm.votedAs = make(map[int]int)
+	sm.votedAs = make([]int,len(sm.peers))
 
 	actions = append(actions,StateStore{currTerm:sm.term,votedFor:sm.votedFor})
 	sm.leaderId = cmd.senderId
@@ -52,7 +52,7 @@ func handleCandidateAppendEntryReq(sm *StateMachine,cmd *AppendEntriesReqEv) []i
 	sm.state = 1
 	sm.term = cmd.term
 	sm.votedFor = -1
-	sm.votedAs = make(map[int]int)
+	sm.votedAs = make([]int,len(sm.peers))
 
 	actions = append(actions,StateStore{currTerm:sm.term,votedFor:sm.votedFor})
 	sm.leaderId = cmd.senderId
@@ -85,7 +85,7 @@ func handleLeaderAppendEntryReq(sm *StateMachine,cmd *AppendEntriesReqEv) []inte
 	sm.state = 1
 	sm.term = cmd.term
 	sm.votedFor = -1
-	sm.votedAs = make(map[int]int)
+	sm.votedAs = make([]int,len(sm.peers))
 
 	actions = append(actions,StateStore{currTerm:sm.term,votedFor:sm.votedFor})
 	sm.leaderId = cmd.senderId

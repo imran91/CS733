@@ -115,6 +115,24 @@ func TestAppendEntryReqFollowerEv(t *testing.T){
 	if lastIndex > 0 {
 		expect(t,strconv.Itoa(a[lastIndex].(StateStore).currTerm),"2")
 	}
+
+	lastIndex = giveIndexOfEvent(a,2)  //Check Commit Index is updated on follower
+	if lastIndex > 0 {
+		expect(t,strconv.Itoa(a[lastIndex].(Commit).index),"1")
+	}
+}
+
+func TestAppendEntryRespLeaderEv(t *testing.T){
+	/*var sm []StateMachine
+	var lastIndex int
+	lastIndex = -1
+	sm = make([]StateMachine,3)
+	exampleInitialise(sm[:])
+
+	a:=sm[0].ProcessEvent(AppendEntriesRespEv{senderId: 2, senderTerm: 2, response:true, lastMatchIndex:2})
+	lastIndex = giveIndexOfEvent(a,4)  //Check data need to store on follower side for LogStore
+	if lastIndex > 0 {
+	}*/
 }
 
 func giveIndexOfEvent(a []interface{},event int) int{
