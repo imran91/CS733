@@ -6,18 +6,20 @@ import (
 var ERR_NOT_LEADER = errors.New("Contact leader")
 var ERR_NO_LEADER_ELECTED = errors.New("No leader is elected yet...Try later")
 func handleFollowerAppend(sm *StateMachine,cmd *Append) []interface{}{
-	
+	initialiseActions()
 	actions = append(actions,Commit{index:-1,leaderId:sm.leaderId,data:cmd.data,err:ERR_NOT_LEADER})
 	return actions
 }
 
 func handleCandidateAppend(sm *StateMachine,cmd *Append) []interface{}{
+	initialiseActions()
 	actions = append(actions,Commit{index:-1,leaderId:sm.leaderId,data:cmd.data,err:ERR_NO_LEADER_ELECTED})
 	return actions
 }
 
 func handleLeaderAppend(sm *StateMachine,cmd *Append) []interface{}{
 	var temp []Log
+	initialiseActions()
 	temp = make([]Log,1)
 	sm.lastLogIndex = sm.lastLogIndex+1
 	sm.lastLogTerm = sm.term

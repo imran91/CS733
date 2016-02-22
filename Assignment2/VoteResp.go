@@ -1,7 +1,7 @@
 package main
 
 func handleFollowerVoteResp(sm *StateMachine,cmd *VoteRespEv) []interface{}{
-
+	initialiseActions()
 	if sm.term < cmd.senderTerm {
 		sm.term = cmd.senderTerm
 		sm.votedFor = -1
@@ -17,6 +17,7 @@ func handleCandidateVoteResp(sm *StateMachine,cmd *VoteRespEv) []interface{}{
 	var totalNumNegVotes int
 	var totalServers int
 	var temp []Log
+	initialiseActions()
 	totalNumPosVotes = 0
 	totalNumPosVotes = 0 
 	totalServers = len(sm.peers)+1
@@ -65,6 +66,7 @@ func handleCandidateVoteResp(sm *StateMachine,cmd *VoteRespEv) []interface{}{
 
 
 func handleLeaderVoteResp(sm *StateMachine,cmd *VoteRespEv) []interface{}{
+	initialiseActions()
 	if sm.term < cmd.senderTerm {
 		sm.term = cmd.senderTerm
 		sm.votedFor = -1

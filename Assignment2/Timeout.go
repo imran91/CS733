@@ -7,6 +7,7 @@ import (
 
 func handleFollowerTimeout(sm *StateMachine,cmd *Timeout) []interface{}{
 	var totalServers int
+	initialiseActions()
 	totalServers = len(sm.peers)+1
 	sm.state = 2
 	sm.term = sm.term + 1
@@ -33,6 +34,7 @@ func handleFollowerTimeout(sm *StateMachine,cmd *Timeout) []interface{}{
 
 func handleCandidateTimeout(sm *StateMachine,cmd *Timeout) []interface{}{
 	var totalServers int
+	initialiseActions()
 	totalServers = len(sm.peers)+1
 	sm.term = sm.term + 1
 	sm.votedFor = -1
@@ -57,7 +59,7 @@ func handleCandidateTimeout(sm *StateMachine,cmd *Timeout) []interface{}{
 
 
 func handleLeaderTimeout(sm *StateMachine,cmd *Timeout) []interface{}{
-
+	initialiseActions()
 	actions = append(actions,Alarm{t:rand.Intn(sm.timer)}) 	//change this
 	var temp []Log
 

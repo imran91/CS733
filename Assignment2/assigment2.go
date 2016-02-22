@@ -119,3 +119,8 @@ func (sm *StateMachine) ProcessEvent (ev interface{}) []interface{}{
 	}
 return act
 }
+
+func initialiseActions(){
+var a []interface{}	
+actions = a
+}

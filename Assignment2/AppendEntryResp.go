@@ -4,18 +4,18 @@ package main
 )*/
 
 func handleFollowerAppendEntryResp(sm *StateMachine,cmd *AppendEntriesRespEv) []interface{}{
-	
+	initialiseActions()
 	return actions
 }
 
 func handleCandidateAppendEntryResp(sm *StateMachine,cmd *AppendEntriesRespEv) []interface{}{
-	
+	initialiseActions()
 	return actions
 }
 
 
 func handleLeaderAppendEntryResp(sm *StateMachine,cmd *AppendEntriesRespEv) []interface{}{
-		
+	initialiseActions()	
 	if sm.term < cmd.senderTerm {
 		sm.state = 1
 		sm.votedFor = -1

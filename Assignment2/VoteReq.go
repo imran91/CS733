@@ -4,7 +4,7 @@ package main
 )*/
 
 func handleFollowerVoteReq(sm *StateMachine,cmd *VoteReqEv) []interface{}{
-	
+	initialiseActions()
 	if sm.term > cmd.term {
 		actions = append(actions,Send{peerId:cmd.senderId,event:VoteRespEv{senderTerm:sm.term,response:false}})
 		return actions		
@@ -28,7 +28,7 @@ func handleFollowerVoteReq(sm *StateMachine,cmd *VoteReqEv) []interface{}{
 
 
 func handleCandidateVoteReq(sm *StateMachine,cmd *VoteReqEv) []interface{}{
-
+	initialiseActions()
 	if sm.term < cmd.term {
 		sm.state = 1
 		sm.term = cmd.term
@@ -52,7 +52,7 @@ func handleCandidateVoteReq(sm *StateMachine,cmd *VoteReqEv) []interface{}{
 
 
 func handleLeaderVoteReq(sm *StateMachine,cmd *VoteReqEv) []interface{}{
-	
+	initialiseActions()
 	if sm.term < cmd.term {
 		sm.state = 1
 		sm.term = cmd.term

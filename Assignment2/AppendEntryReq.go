@@ -1,16 +1,17 @@
 package main
 import (
-	//"fmt"
+	"fmt"
 	"math/rand"
 	"math"
 )
 //var actions []interface{}
 func handleFollowerAppendEntryReq(sm *StateMachine,cmd *AppendEntriesReqEv) []interface{}{
-	
+	initialiseActions()
 	if sm.term > cmd.term {
 		actions = append(actions,Send{peerId:cmd.senderId,event:AppendEntriesRespEv{senderId: sm.id , senderTerm: sm.term, response:false,lastMatchIndex:sm.commitIndex}})
 		return actions		
 	}
+	
 	actions = append(actions,Alarm{t:rand.Intn(2*sm.timer-sm.timer)+sm.timer})
 
 	sm.term = cmd.term
@@ -30,6 +31,7 @@ func handleFollowerAppendEntryReq(sm *StateMachine,cmd *AppendEntriesReqEv) []in
 
 	sm.lastLogIndex = cmd.prevLogIndex + len(cmd.entries)
 	sm.lastLogTerm = sm.log[sm.lastLogIndex].term
+	
 	sm.commitIndex = int(math.Min(float64(sm.lastLogIndex),float64(cmd.senderCommitIndex)))
 
 	actions = append(actions,Commit{index:sm.commitIndex,leaderId:sm.leaderId,data:sm.log[sm.commitIndex].command,err:nil})
@@ -39,11 +41,12 @@ func handleFollowerAppendEntryReq(sm *StateMachine,cmd *AppendEntriesReqEv) []in
 }
 
 func handleCandidateAppendEntryReq(sm *StateMachine,cmd *AppendEntriesReqEv) []interface{}{
+	initialiseActions()
 	if sm.term > cmd.term {
 		actions = append(actions,Send{peerId:cmd.senderId,event:AppendEntriesRespEv{senderId: sm.id , senderTerm: sm.term, response:false,lastMatchIndex:sm.commitIndex}})
 		return actions		
 	}
-
+	fmt.Println("Inside candidate")
 	actions = append(actions,Alarm{t:rand.Intn(2*sm.timer-sm.timer)+sm.timer})
 
 	sm.state = 1
@@ -71,11 +74,12 @@ func handleCandidateAppendEntryReq(sm *StateMachine,cmd *AppendEntriesReqEv) []i
 
 
 func handleLeaderAppendEntryReq(sm *StateMachine,cmd *AppendEntriesReqEv) []interface{}{
+	initialiseActions()
 	if sm.term > cmd.term {
 		actions = append(actions,Send{peerId:cmd.senderId,event:AppendEntriesRespEv{senderId: sm.id , senderTerm: sm.term, response:false,lastMatchIndex:sm.commitIndex}})
 		return actions		
 	}
-
+	fmt.Println("Inside leader")
 	actions = append(actions,Alarm{t:rand.Intn(2*sm.timer-sm.timer)+sm.timer})
 
 	sm.state = 1
