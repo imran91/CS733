@@ -1,6 +1,6 @@
 package main
 
-type Append struct{
+type Append struct {
 	data []byte
 }
 
@@ -8,35 +8,35 @@ type Timeout struct {
 }
 
 type AppendEntriesReqEv struct {
-	term int //leaders term
-	senderId int //leaderId
-	prevLogIndex int
-	prevLogTerm int
-	entries []Log
+	term              int //leaders term
+	senderId          int //leaderId
+	prevLogIndex      int
+	prevLogTerm       int
+	entries           []Log
 	senderCommitIndex int
 }
 
 type AppendEntriesRespEv struct {
-	senderId int
-	senderTerm int
-	response bool
+	senderId       int
+	senderTerm     int
+	response       bool
 	lastMatchIndex int
 }
 
 type VoteReqEv struct {
-	senderId int
-	term int
+	senderId     int
+	term         int
 	lastLogIndex int
-	lastLogTerm int
+	lastLogTerm  int
 }
 
-type VoteRespEv struct{
-	senderId int
+type VoteRespEv struct {
+	senderId   int
 	senderTerm int
-	response bool
+	response   bool
 }
 
-type Log struct{
-	term int
+type Log struct {
+	term    int
 	command []byte
 }
