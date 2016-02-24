@@ -1,7 +1,8 @@
 package main
+
 import (
 //	"fmt"
-	)
+)
 
 func handleFollowerVoteResp(sm *StateMachine, cmd *VoteRespEv) []interface{} {
 	initialiseActions()
@@ -53,7 +54,7 @@ func handleCandidateVoteResp(sm *StateMachine, cmd *VoteRespEv) []interface{} {
 		sm.state = 3
 		sm.leaderId = sm.id
 
-		for i := 0; i < (totalServers-1); i++ {
+		for i := 0; i < (totalServers - 1); i++ {
 
 			prevLogIndex := sm.nextIndex[i] - 1
 			prevLogTerm := sm.log[prevLogIndex].term

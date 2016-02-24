@@ -19,7 +19,6 @@ func handleFollowerTimeout(sm *StateMachine, cmd *Timeout) []interface{} {
 		sm.votedAs[i] = 0
 	}
 
-
 	sm.votedAs[len(sm.peers)] = 1 //self vote //last index of votedAs is for self voting
 	sm.votedFor = sm.id
 	actions = append(actions, StateStore{currTerm: sm.term, votedFor: sm.votedFor})
