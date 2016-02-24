@@ -285,6 +285,118 @@ func TestTimeoutLeader(t *testing.T) {
 
 }
 
+func TestVoteReqFollower(t *testing.T) {
+	var sm []StateMachine
+	var lastIndex int
+	lastIndex = -1
+	sm = make([]StateMachine, 3)
+	exampleInitialise(sm[:])
+
+	sm[1].log[1].term = 1
+	sm[1].log[1].command = []byte{'w', 'r', 'i', 't', 'e'}
+
+	sm[1].log[2].term = 2
+	sm[1].log[2].command = []byte{'r', 'e', 'a', 'd'}
+
+	sm[1].lastLogIndex = 2
+
+	sm[1].state = 2 //Candidate
+	a := sm[2].ProcessEvent(VoteReqEv{senderId: 2, term: 2, lastLogIndex: 2, lastLogTerm: 2})
+
+	lastIndex = giveIndexOfEvent(a, 5) //Check Statestore action
+	if lastIndex >= 0 {
+		expect(t, strconv.Itoa(a[lastIndex].(StateStore).votedFor), "2") //check candidate gets a vote
+	}
+
+	lastIndex = giveIndexOfEvent(a, 5) //Check Statestore action
+	if lastIndex >= 0 {
+		expect(t, strconv.Itoa(a[lastIndex].(StateStore).currTerm), "2") //check follower updates current term
+	}
+}
+
+func TestVoteReqCandidate(t *testing.T) {
+	var sm []StateMachine
+	var lastIndex int
+	lastIndex = -1
+	sm = make([]StateMachine, 3)
+	exampleInitialise(sm[:])
+
+	sm[1].state = 2 //Candidate
+	sm[2].state = 2 //Candidate
+
+	a := sm[2].ProcessEvent(VoteReqEv{senderId: 2, term: 3, lastLogIndex: 0, lastLogTerm: 1})
+
+	expect(t, strconv.Itoa(sm[2].state), "1") //check candidate becomes follower
+
+	lastIndex = giveIndexOfEvent(a, 5) //Check Statestore action
+	if lastIndex >= 0 {
+		expect(t, strconv.Itoa(a[lastIndex].(StateStore).currTerm), "3") //check follower updates current term
+	}
+	lastIndex = giveIndexOfEvent(a, 5) //Check Statestore action
+	if lastIndex >= 0 {
+		expect(t, strconv.Itoa(a[lastIndex].(StateStore).votedFor), "2") //check candidate gets a vote
+	}
+	lastIndex = giveIndexOfEvent(a, 1) //Check Send action
+	if lastIndex >= 0 {
+		f, ok := a[lastIndex].(Send)
+		if ok {
+			expect(t, strconv.FormatBool(f.event.(VoteRespEv).response), "true") //check response is true
+		}
+	}
+}
+
+func TestVoteReqLeader(t *testing.T) {
+	var sm []StateMachine
+	var lastIndex int
+	lastIndex = -1
+	sm = make([]StateMachine, 3)
+	exampleInitialise(sm[:])
+
+	a := sm[1].ProcessEvent(Timeout{}) //follower changes state to candidate
+	a = sm[0].ProcessEvent(VoteReqEv{senderId: 2, term: 1, lastLogIndex: 0, lastLogTerm: 1})
+	//leader now should respond with it's current term 2 and response false
+
+	lastIndex = giveIndexOfEvent(a, 1) //Check Send action
+	if lastIndex >= 0 {
+		f, ok := a[lastIndex].(Send)
+		if ok {
+			expect(t, strconv.Itoa(f.event.(VoteRespEv).senderTerm), "2")
+			expect(t, strconv.FormatBool(f.event.(VoteRespEv).response), "false") //check response is false
+		}
+	}
+
+	lastIndex = -1
+	sm = make([]StateMachine, 3)
+	exampleInitialise(sm[:])
+
+	sm[1].state = 2 //candidate
+	sm[1].log[1].term = 1
+	sm[1].log[1].command = []byte{'w', 'r', 'i', 't', 'e'}
+
+	sm[1].log[2].term = 2
+	sm[1].log[2].command = []byte{'r', 'e', 'a', 'd'}
+
+	sm[1].lastLogIndex = 2
+
+	sm[1].term = 3
+	a = sm[0].ProcessEvent(VoteReqEv{senderId: 2, term: 3, lastLogIndex: 2, lastLogTerm: 2})
+
+	expect(t, strconv.Itoa(sm[0].state), "1") //check leader becomes follower
+
+	lastIndex = giveIndexOfEvent(a, 1) //Check Send action
+	if lastIndex >= 0 {
+		f, ok := a[lastIndex].(Send)
+		if ok {
+			expect(t, strconv.FormatBool(f.event.(VoteRespEv).response), "true") //check response is true
+		}
+	}
+	lastIndex = giveIndexOfEvent(a, 5) //Check Statestore action
+	if lastIndex >= 0 {
+		expect(t, strconv.Itoa(a[lastIndex].(StateStore).votedFor), "2") //check candidate gets a vote
+	}
+
+}
+
 func giveIndexOfEvent(a []interface{}, event int) int {
 	var ind int
 	ind = -1
@@ -311,9 +423,7 @@ func giveIndexOfEvent(a []interface{}, event int) int {
 				ind = i
 			}
 		}
-		//fmt.Println(event.(StateStore))
 	}
-	//fmt.Println()
 	return ind
 }
 
