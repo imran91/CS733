@@ -19,7 +19,8 @@ func handleFollowerTimeout(sm *StateMachine, cmd *Timeout) []interface{} {
 		sm.votedAs[i] = 0
 	}
 
-	sm.votedAs[sm.id] = 1 //self vote
+
+	sm.votedAs[len(sm.peers)] = 1 //self vote //last index of votedAs is for self voting
 	sm.votedFor = sm.id
 	actions = append(actions, StateStore{currTerm: sm.term, votedFor: sm.votedFor})
 	actions = append(actions, Alarm{t: rand.Intn(2*sm.timer-sm.timer) + sm.timer}) //equivalent to random(timer,2*timer)
@@ -44,7 +45,7 @@ func handleCandidateTimeout(sm *StateMachine, cmd *Timeout) []interface{} {
 	for i := 0; i < totalServers; i++ {
 		sm.votedAs[i] = 0
 	}
-	sm.votedAs[sm.id] = 1 //self vote
+	sm.votedAs[len(sm.peers)] = 1 //self vote
 	sm.votedFor = sm.id
 	actions = append(actions, StateStore{currTerm: sm.term, votedFor: sm.votedFor})
 	actions = append(actions, Alarm{t: rand.Intn(2*sm.timer-sm.timer) + sm.timer})

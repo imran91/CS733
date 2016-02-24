@@ -7,7 +7,7 @@ package main
 func handleFollowerVoteReq(sm *StateMachine, cmd *VoteReqEv) []interface{} {
 	initialiseActions()
 	if sm.term > cmd.term {
-		actions = append(actions, Send{peerId: cmd.senderId, event: VoteRespEv{senderTerm: sm.term, response: false}})
+		actions = append(actions, Send{peerId: cmd.senderId, event: VoteRespEv{senderId: sm.id,senderTerm: sm.term, response: false}})
 		return actions
 	}
 

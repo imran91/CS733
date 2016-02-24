@@ -53,9 +53,12 @@ func exampleInitialise(sm []StateMachine) {
 	sm[1].commitIndex = 0
 	sm[2].commitIndex = 0
 	sm[0].lastLogIndex = 2
+	sm[1].lastLogIndex = 0
+	sm[2].lastLogIndex = 0
 
 	sm[0].matchIndex[0] = 0
 	sm[0].matchIndex[1] = 0
+
 }
 
 func TestLeaderAppend(t *testing.T) {
@@ -395,6 +398,55 @@ func TestVoteReqLeader(t *testing.T) {
 		expect(t, strconv.Itoa(a[lastIndex].(StateStore).votedFor), "2") //check candidate gets a vote
 	}
 
+}
+
+func TestVoteRespCandidate(t *testing.T) {
+	var sm []StateMachine
+	var lastIndex int
+	lastIndex = -1
+	sm = make([]StateMachine, 3)
+	exampleInitialise(sm[:])
+
+	sm[1].log[1].term = 1
+	sm[1].log[1].command = []byte{'w', 'r', 'i', 't', 'e'}
+
+	sm[1].log[2].term = 2
+	sm[1].log[2].command = []byte{'r', 'e', 'a', 'd'}
+
+
+	sm[1].lastLogIndex = 2
+	sm[1].term = 3
+	sm[2].term =2
+	sm[0].state = 1 //follower
+
+
+	//server 2 and 3 are candidates but 2 has more up-to-date data so 2 should become leader
+	a := sm[1].ProcessEvent(Timeout{}) //follower changes state to candidate
+	a = sm[2].ProcessEvent(Timeout{}) //follower changes state to candidate
+
+
+	//this candidate should receive +ve ACK
+	a = sm[0].ProcessEvent(VoteReqEv{senderId: 2, term: 3, lastLogIndex: 2, lastLogTerm: 2})
+
+	lastIndex = giveIndexOfEvent(a, 1) //Check Send action
+	if lastIndex >= 0 {
+		f, ok := a[lastIndex].(Send)
+		if ok {
+			expect(t, strconv.FormatBool(f.event.(VoteRespEv).response), "true") //check response is true
+		}
+	}
+	
+	//this candidate should receive -ve ACK
+	//fmt.Println(sm[2].term)
+	a = sm[0].ProcessEvent(VoteReqEv{senderId: 3, term: 2, lastLogIndex: 0, lastLogTerm: 1})
+	
+	lastIndex = giveIndexOfEvent(a, 1) //Check Send action
+	if lastIndex >= 0 {
+		f, ok := a[lastIndex].(Send)
+		if ok {
+			expect(t, strconv.FormatBool(f.event.(VoteRespEv).response), "false") //check response is true
+		}
+	}
 }
 
 func giveIndexOfEvent(a []interface{}, event int) int {

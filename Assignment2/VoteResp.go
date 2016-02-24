@@ -1,4 +1,7 @@
 package main
+import (
+//	"fmt"
+	)
 
 func handleFollowerVoteResp(sm *StateMachine, cmd *VoteRespEv) []interface{} {
 	initialiseActions()
@@ -17,6 +20,7 @@ func handleCandidateVoteResp(sm *StateMachine, cmd *VoteRespEv) []interface{} {
 	var totalNumNegVotes int
 	var totalServers int
 	var temp []Log
+	var ind int
 	initialiseActions()
 	totalNumPosVotes = 0
 	totalNumPosVotes = 0
@@ -30,9 +34,11 @@ func handleCandidateVoteResp(sm *StateMachine, cmd *VoteRespEv) []interface{} {
 	}
 
 	if cmd.response == true {
-		sm.votedAs[cmd.senderId] = 1
-	} else {
-		sm.votedAs[cmd.senderId] = -1
+		ind = findSenderIndex(sm.peers, cmd.senderId)
+		sm.votedAs[ind] = 1
+	} else if cmd.response == false {
+		ind = findSenderIndex(sm.peers, cmd.senderId)
+		sm.votedAs[ind] = -1
 	}
 
 	for i := 0; i < totalServers; i++ {
@@ -42,25 +48,24 @@ func handleCandidateVoteResp(sm *StateMachine, cmd *VoteRespEv) []interface{} {
 			totalNumNegVotes++
 		}
 	}
-
 	if totalNumPosVotes > (totalServers / 2) {
 		//elected as leader
 		sm.state = 3
 		sm.leaderId = sm.id
 
-		for i := 0; i < totalServers-1; i++ {
-			prevLogIndex := sm.nextIndex[sm.peers[i]] - 1
+		for i := 0; i < (totalServers-1); i++ {
+
+			prevLogIndex := sm.nextIndex[i] - 1
 			prevLogTerm := sm.log[prevLogIndex].term
 			entries := temp
 			actions = append(actions, Send{peerId: sm.peers[i], event: AppendEntriesReqEv{term: sm.term, senderId: sm.id, prevLogIndex: prevLogIndex,
 				prevLogTerm: prevLogTerm, entries: entries, senderCommitIndex: sm.commitIndex}})
+
 		}
 	} else if totalNumNegVotes > (totalServers / 2) {
 		//step down and become follower
 		sm.state = 1
-
 	}
-
 	return actions
 }
 
