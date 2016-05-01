@@ -1,29 +1,30 @@
 package main
 
 type Send struct {
-	peerId int
-	event  Event //change
+	PeerId int
+	Event  Event 
 }
 
 type Event interface{}
 
 type Commit struct {
-	index    int
-	leaderId int
-	data     []byte
-	err      error
+	Index    int
+	LeaderId int
+	Data     []byte
+	Err      error
 }
 
 type Alarm struct {
-	t int
+	T int64
 }
 
 type LogStore struct {
-	index    int
-	logEntry []Log
+	Index    int64
+	LogEntry Log
 }
 
 type StateStore struct {
-	currTerm int
-	votedFor int
+	CurrTerm int
+	VotedFor int
+	LastMatchIndex int64
 }

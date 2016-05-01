@@ -1,76 +1,88 @@
 package main
 
-/*import (
-	"fmt"
-)*/
+import (
+//	"fmt"
+)
 
 func handleFollowerVoteReq(sm *StateMachine, cmd *VoteReqEv) []interface{} {
 	initialiseActions()
-	if sm.term > cmd.term {
-		actions = append(actions, Send{peerId: cmd.senderId, event: VoteRespEv{senderId: sm.id, senderTerm: sm.term, response: false}})
-		return actions
+	if sm.term < cmd.Term{
+		sm.term = cmd.Term
+		sm.lastMatchIndex = -1
+		sm.votedFor = -1
+		actions = append(actions, StateStore{CurrTerm: sm.term, VotedFor: sm.votedFor, LastMatchIndex: sm.lastMatchIndex})	
+
 	}
 
-	if (sm.lastLogTerm > cmd.lastLogTerm) || ((sm.lastLogTerm == cmd.lastLogTerm) && sm.lastLogIndex > cmd.lastLogIndex) {
-		actions = append(actions, Send{peerId: cmd.senderId, event: VoteRespEv{senderId: sm.id, senderTerm: sm.term, response: false}})
-		return actions
+	if sm.term > cmd.Term {
+		actions = append(actions, Send{PeerId: cmd.SenderId, Event: VoteRespEv{SenderId: sm.id, SenderTerm: sm.term, Response: false}})
+
+	} else if (sm.lastLogTerm > cmd.LastLogTerm) || ((sm.lastLogTerm == cmd.LastLogTerm) && int(sm.lastLogIndex) > cmd.LastLogIndex) {
+		actions = append(actions, Send{PeerId: cmd.SenderId, Event: VoteRespEv{SenderId: sm.id, SenderTerm: sm.term, Response: false}})
+
+	}else if sm.votedFor != -1 && sm.votedFor != cmd.SenderId {
+		actions = append(actions, Send{PeerId: cmd.SenderId, Event: VoteRespEv{SenderId: sm.id, SenderTerm: sm.term, Response: false}})
+
+	} else {
+		actions = append(actions, Alarm{T:randomNoInRange(2 * sm.electionAlarm, 3 * sm.electionAlarm)}) //equivalent to random(timer,2*timer)
+		sm.votedFor = cmd.SenderId
+		actions = append(actions, StateStore{CurrTerm: sm.term, VotedFor: sm.votedFor, LastMatchIndex: sm.lastMatchIndex})	
+		actions = append(actions, Send{PeerId: cmd.SenderId, Event: VoteRespEv{SenderId: sm.id, SenderTerm: sm.term, Response: true}})
 	}
 
-	if sm.votedFor != 0 && sm.votedFor != cmd.senderId {
-		actions = append(actions, Send{peerId: cmd.senderId, event: VoteRespEv{senderId: sm.id, senderTerm: sm.term, response: false}})
-		return actions
-	}
-
-	sm.votedFor = cmd.senderId
-	sm.term = cmd.term
-	actions = append(actions, StateStore{currTerm: sm.term, votedFor: sm.votedFor})
-	actions = append(actions, Send{peerId: cmd.senderId, event: VoteRespEv{senderId: sm.id, senderTerm: sm.term, response: true}})
+//	fmt.Println(sm.id, "Inside follwer VoteReq",actions)
 	return actions
 }
 
 func handleCandidateVoteReq(sm *StateMachine, cmd *VoteReqEv) []interface{} {
 	initialiseActions()
-	if sm.term < cmd.term {
+	if sm.term < cmd.Term {
 		sm.state = 1
-		sm.term = cmd.term
+		sm.term = cmd.Term
 		sm.votedFor = -1
-		sm.votedAs = make([]int, len(sm.peers)+1)
-		actions = append(actions, StateStore{currTerm: sm.term, votedFor: sm.votedFor})
+		sm.lastMatchIndex = -1
+		actions = append(actions, Alarm{T:randomNoInRange(2 * sm.electionAlarm, 3 * sm.electionAlarm)}) //equivalent to random(timer,2*timer)
+		actions = append(actions, StateStore{CurrTerm: sm.term, VotedFor: sm.votedFor,LastMatchIndex: sm.lastMatchIndex})
 
-		if (sm.lastLogTerm > cmd.lastLogTerm) || ((sm.lastLogTerm == cmd.lastLogTerm) && sm.lastLogIndex > cmd.lastLogIndex) {
-			actions = append(actions, Send{peerId: cmd.senderId, event: VoteRespEv{senderId: sm.id, senderTerm: sm.term, response: false}})
+		if (sm.lastLogTerm > cmd.LastLogTerm) || ((sm.lastLogTerm == cmd.LastLogTerm) && int(sm.lastLogIndex) > cmd.LastLogIndex) {
+			actions = append(actions, Send{PeerId: cmd.SenderId, Event: VoteRespEv{SenderId: sm.id, SenderTerm: sm.term, Response: false}})
 			return actions
+		} else {
+			sm.votedFor = cmd.SenderId
+			actions = append(actions, StateStore{CurrTerm: sm.term, VotedFor: sm.votedFor,LastMatchIndex: sm.lastMatchIndex})
+			actions = append(actions, Send{PeerId: cmd.SenderId, Event: VoteRespEv{SenderId: sm.id, SenderTerm: sm.term, Response: true}})
 		}
-		sm.votedFor = cmd.senderId
-		actions = append(actions, StateStore{currTerm: sm.term, votedFor: sm.votedFor})
-		actions = append(actions, Send{peerId: cmd.senderId, event: VoteRespEv{senderId: sm.id, senderTerm: sm.term, response: true}})
-		return actions
+	} else {
+			actions = append(actions, Send{PeerId: cmd.SenderId, Event: VoteRespEv{SenderId: sm.id, SenderTerm: sm.term, Response: false}})	
 	}
 
-	actions = append(actions, Send{peerId: cmd.senderId, event: VoteRespEv{senderId: sm.id, senderTerm: sm.term, response: false}})
+//	fmt.Println(sm.id, "Inside candidate VoteReq")
 	return actions
 }
 
 func handleLeaderVoteReq(sm *StateMachine, cmd *VoteReqEv) []interface{} {
 	initialiseActions()
-	if sm.term < cmd.term {
+	if sm.term < cmd.Term {
 		sm.state = 1
-		sm.term = cmd.term
+		sm.term = cmd.Term
 		sm.votedFor = -1
-		sm.votedAs = make([]int, len(sm.peers)+1)
-		actions = append(actions, StateStore{currTerm: sm.term, votedFor: sm.votedFor})
+		sm.lastMatchIndex = -1
+		actions = append(actions, Alarm{T:randomNoInRange(2 * sm.electionAlarm, 3 * sm.electionAlarm)}) //equivalent to random(timer,2*timer)
+		actions = append(actions, StateStore{CurrTerm: sm.term, VotedFor: sm.votedFor,LastMatchIndex: sm.lastMatchIndex})
 
-		if (sm.lastLogTerm > cmd.lastLogTerm) || ((sm.lastLogTerm == cmd.lastLogTerm) && sm.lastLogIndex > cmd.lastLogIndex) {
-			actions = append(actions, Send{peerId: cmd.senderId, event: VoteRespEv{senderId: sm.id, senderTerm: sm.term, response: false}})
+		if (sm.lastLogTerm > cmd.LastLogTerm) || ((sm.lastLogTerm == cmd.LastLogTerm) && int(sm.lastLogIndex) > cmd.LastLogIndex) {
+			actions = append(actions, Send{PeerId: cmd.SenderId, Event: VoteRespEv{SenderId: sm.id, SenderTerm: sm.term, Response: false}})
 			return actions
+		} else {
+			sm.votedFor = cmd.SenderId
+			actions = append(actions, StateStore{CurrTerm: sm.term, VotedFor: sm.votedFor,LastMatchIndex: sm.lastMatchIndex})
+			actions = append(actions, Send{PeerId: cmd.SenderId, Event: VoteRespEv{SenderId: sm.id, SenderTerm: sm.term, Response: true}})
 		}
-		sm.votedFor = cmd.senderId
-		actions = append(actions, StateStore{currTerm: sm.term, votedFor: sm.votedFor})
-		actions = append(actions, Send{peerId: cmd.senderId, event: VoteRespEv{senderId: sm.id, senderTerm: sm.term, response: true}})
-		return actions
+	} else {
+			actions = append(actions, Send{PeerId: cmd.SenderId, Event: VoteRespEv{SenderId: sm.id, SenderTerm: sm.term, Response: false}})	
 	}
 
-	actions = append(actions, Send{peerId: cmd.senderId, event: VoteRespEv{senderId: sm.id, senderTerm: sm.term, response: false}})
+//	fmt.Println(sm.id, "Inside Leader VoteReq")
 	return actions
 
 }

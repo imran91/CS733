@@ -1,4 +1,7 @@
 package main
+import(
+	"math/rand"
+)
 
 var actions []interface{}
 
@@ -9,15 +12,39 @@ type StateMachine struct {
 	term         int
 	state        int //1:follower 2:candidate 3:leader
 	votedFor     int
-	commitIndex  int
-	lastLogIndex int
+	commitIndex  int64
+	lastLogIndex int64
 	lastLogTerm  int
 	leaderId     int
-	nextIndex    []int
-	matchIndex   []int
-	votedAs      []int
+	nextIndex    map[int]int
+	matchIndex   map[int]int
+	votedAs      map[int]int
+	clusterSize int
 	timer        int
+	electionAlarm int64
+	heartbeatAlarm int64
+	lastMatchIndex int64 //till what point log is matched
 }
+
+func randomNoInRange(min, max int64) int64 {	
+	return int64(rand.Intn(int(max - min))) + min
+}
+
+
+func min(a, b int64) int64 {
+	if a <= b {	
+		return a
+	} 
+	return b
+}
+
+func max(a, b int64) int64 {
+	if a >= b {	
+		return a
+	} 
+	return b
+}
+
 
 func (sm *StateMachine) ProcessEvent(ev interface{}) []interface{} {
 	var act []interface{}

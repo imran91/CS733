@@ -6,13 +6,14 @@ import (
 
 func handleFollowerVoteResp(sm *StateMachine, cmd *VoteRespEv) []interface{} {
 	initialiseActions()
-	if sm.term < cmd.senderTerm {
-		sm.term = cmd.senderTerm
+	if sm.term < cmd.SenderTerm {
+		actions = append(actions, Alarm{T:randomNoInRange(2 * sm.electionAlarm, 3 * sm.electionAlarm)}) //equivalent to random(timer,2*timer)
+		sm.term = cmd.SenderTerm
 		sm.votedFor = -1
-		sm.votedAs = make([]int, len(sm.peers)+1)
-		actions = append(actions, StateStore{currTerm: sm.term, votedFor: sm.votedFor})
+		sm.lastMatchIndex = -1
+		actions = append(actions, StateStore{CurrTerm: sm.term, VotedFor: sm.votedFor,LastMatchIndex: sm.lastMatchIndex})
 	}
-
+//	fmt.Println("Inside follwer VoteResp")
 	return actions
 }
 
@@ -20,65 +21,90 @@ func handleCandidateVoteResp(sm *StateMachine, cmd *VoteRespEv) []interface{} {
 	var totalNumPosVotes int
 	var totalNumNegVotes int
 	var totalServers int
-	var temp []Log
-	var ind int
+	var prevLogTerm int64
 	initialiseActions()
-	totalNumPosVotes = 0
-	totalNumPosVotes = 0
+	totalNumPosVotes = 1
+	totalNumNegVotes = 0
 	totalServers = len(sm.peers) + 1
-	if sm.term < cmd.senderTerm {
-		sm.term = cmd.senderTerm
-		sm.votedFor = -1
-		sm.votedAs = make([]int, len(sm.peers)+1)
-		actions = append(actions, StateStore{currTerm: sm.term, votedFor: sm.votedFor})
-		sm.state = 1
-	}
-
-	if cmd.response == true {
-		ind = findSenderIndex(sm.peers, cmd.senderId)
-		sm.votedAs[ind] = 1
-	} else if cmd.response == false {
-		ind = findSenderIndex(sm.peers, cmd.senderId)
-		sm.votedAs[ind] = -1
-	}
-
-	for i := 0; i < totalServers; i++ {
-		if sm.votedAs[i] == 1 { //counting all ACKs
+	for i := 0; i < totalServers-1; i++ {
+		if sm.votedAs[sm.peers[i]] == 1 { //counting all ACKs
 			totalNumPosVotes++
-		} else if sm.votedAs[i] == -1 {
+		} else if sm.votedAs[sm.peers[i]] == -1 {
 			totalNumNegVotes++
 		}
 	}
-	if totalNumPosVotes > (totalServers / 2) {
-		//elected as leader
-		sm.state = 3
-		sm.leaderId = sm.id
 
-		for i := 0; i < (totalServers - 1); i++ {
+	if sm.term < cmd.SenderTerm {
+		sm.state = 1
+		sm.term = cmd.SenderTerm
+		sm.votedFor = -1
+		sm.lastMatchIndex = -1
+		actions = append(actions, Alarm{T:randomNoInRange(2 * sm.electionAlarm, 3 * sm.electionAlarm)}) //equivalent to random(timer,2*timer)
+		actions = append(actions, StateStore{CurrTerm: sm.term, VotedFor: sm.votedFor,LastMatchIndex: sm.lastMatchIndex})
+	} else if sm.term == cmd.SenderTerm {
+		if cmd.Response == true {
+			if sm.votedAs[cmd.SenderId] == 0 {
+					sm.votedAs[cmd.SenderId] = 1
+					totalNumPosVotes++
+				}
+			if totalNumPosVotes > (sm.clusterSize / 2) {
+				//elected as leader
+				sm.state = 3
+				sm.leaderId = sm.id
+				sm.nextIndex = make(map[int]int)
+				sm.matchIndex = make(map[int]int)
 
-			prevLogIndex := sm.nextIndex[i] - 1
-			prevLogTerm := sm.log[prevLogIndex].term
-			entries := temp
-			actions = append(actions, Send{peerId: sm.peers[i], event: AppendEntriesReqEv{term: sm.term, senderId: sm.id, prevLogIndex: prevLogIndex,
-				prevLogTerm: prevLogTerm, entries: entries, senderCommitIndex: sm.commitIndex}})
+					for i:=0;i< totalServers-1;i++ {
+						sm.nextIndex[i] = int(sm.lastLogIndex) + 1
+						sm.matchIndex[i] = -1
+					}
+				actions = append(actions, Alarm{T:randomNoInRange(2 * sm.electionAlarm, 3 * sm.electionAlarm)}) //equivalent to random(timer,2*timer)
+				for i := 0; i < len(sm.peers); i++ {
+					prevLogIndex := int(sm.nextIndex[sm.peers[i]]) - 1
+					if prevLogIndex < 0 {
+							prevLogTerm = 0
+					} else if prevLogIndex >= len(sm.log) {
+							continue
+					} else{
+							prevLogTerm = int64(sm.log[prevLogIndex].Term)
+					}
+
+					if sm.nextIndex[sm.peers[i]] > len(sm.log) {
+					continue
+					}
+					entries := sm.log[sm.nextIndex[sm.peers[i]]:]
+
+					actions = append(actions, Send{PeerId: sm.peers[i], Event: AppendEntriesReqEv{Term: sm.term, SenderId: sm.id, PrevLogIndex: int64(prevLogIndex),
+					PrevLogTerm: int64(prevLogTerm), Entries: entries, SenderCommitIndex: sm.commitIndex}})
+				}
+			}		
+		} else if cmd.Response == false {
+				if sm.votedAs[cmd.SenderId] == 0 {
+					sm.votedAs[cmd.SenderId] = 1
+					totalNumPosVotes++
+				}
+				if totalNumNegVotes > (sm.clusterSize / 2) {
+					sm.state = 1
+					actions = append(actions, Alarm{T:randomNoInRange(2 * sm.electionAlarm, 3 * sm.electionAlarm)}) //equivalent to random(timer,2*timer)
+				}
 
 		}
-	} else if totalNumNegVotes > (totalServers / 2) {
-		//step down and become follower
-		sm.state = 1
+
 	}
+	
+//	fmt.Println("Inside candidate VoteResp")
 	return actions
 }
 
 func handleLeaderVoteResp(sm *StateMachine, cmd *VoteRespEv) []interface{} {
 	initialiseActions()
-	if sm.term < cmd.senderTerm {
-		sm.term = cmd.senderTerm
+	if sm.term < cmd.SenderTerm {
+		actions = append(actions, Alarm{T:randomNoInRange(2 * sm.electionAlarm, 3 * sm.electionAlarm)}) //equivalent to random(timer,2*timer)
+		sm.term = cmd.SenderTerm
 		sm.votedFor = -1
-		sm.votedAs = make([]int, len(sm.peers))
-		actions = append(actions, StateStore{currTerm: sm.term, votedFor: sm.votedFor})
-		sm.state = 1
+		sm.lastMatchIndex = -1
+		actions = append(actions, StateStore{CurrTerm: sm.term, VotedFor: sm.votedFor,LastMatchIndex: sm.lastMatchIndex})
 	}
-
+//	fmt.Println("Inside leader VoteResp")
 	return actions
 }

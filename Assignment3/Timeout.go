@@ -1,75 +1,84 @@
 package main
 
 import (
-	//	"fmt"
-	"math/rand"
+//		"fmt"
 )
 
 func handleFollowerTimeout(sm *StateMachine, cmd *Timeout) []interface{} {
 	var totalServers int
 	initialiseActions()
+	actions = append(actions, Alarm{T:randomNoInRange(2 * sm.electionAlarm, 3 * sm.electionAlarm)}) //equivalent to random(timer,2*timer)
 	totalServers = len(sm.peers) + 1
 	sm.state = 2
 	sm.term = sm.term + 1
-	sm.votedFor = -1
-	actions = append(actions, StateStore{currTerm: sm.term, votedFor: sm.votedFor})
+	sm.lastMatchIndex = -1
 
-	sm.votedAs = make([]int, len(sm.peers)+1)
+	sm.votedAs = make(map[int]int, len(sm.peers)+1)
 	for i := 0; i < totalServers-1; i++ {
-		sm.votedAs[i] = 0
+		sm.votedAs[sm.peers[i]] = 0
 	}
-
-	sm.votedAs[len(sm.peers)] = 1 //self vote //last index of votedAs is for self voting
+	
+	sm.votedAs[sm.id] = 1 //self vote //last index of votedAs is for self voting
 	sm.votedFor = sm.id
-	actions = append(actions, StateStore{currTerm: sm.term, votedFor: sm.votedFor})
-	actions = append(actions, Alarm{t: rand.Intn(2*sm.timer-sm.timer) + sm.timer}) //equivalent to random(timer,2*timer)
-
+	actions = append(actions, StateStore{CurrTerm: sm.term, VotedFor: sm.votedFor})
+	
 	for i := 0; i < (len(sm.peers)); i++ {
-		actions = append(actions, Send{peerId: sm.peers[i], event: VoteReqEv{senderId: sm.id,
-			term: sm.term, lastLogIndex: sm.lastLogIndex, lastLogTerm: sm.lastLogTerm}})
+		actions = append(actions, Send{PeerId: sm.peers[i], Event: VoteReqEv{SenderId: sm.id,
+			Term: sm.term, LastLogIndex: int(sm.lastLogIndex), LastLogTerm: sm.lastLogTerm}})
 	}
-
+//	fmt.Println(sm.id, "Inside follwer Timeout")
 	return actions
 }
 
 func handleCandidateTimeout(sm *StateMachine, cmd *Timeout) []interface{} {
 	var totalServers int
 	initialiseActions()
+	actions = append(actions, Alarm{T:randomNoInRange(2 * sm.electionAlarm, 3 * sm.electionAlarm)}) //equivalent to random(timer,2*timer)
 	totalServers = len(sm.peers) + 1
+	sm.state = 2
 	sm.term = sm.term + 1
-	sm.votedFor = -1
-	sm.votedAs = make([]int, len(sm.peers)+1)
-	actions = append(actions, StateStore{currTerm: sm.term, votedFor: sm.votedFor})
-	//numVotes=1   new logic need to be added
-	for i := 0; i < totalServers; i++ {
-		sm.votedAs[i] = 0
+	sm.lastMatchIndex = -1
+
+	sm.votedAs = make(map[int]int, len(sm.peers)+1)
+	for i := 0; i < totalServers-1; i++ {
+		sm.votedAs[sm.peers[i]] = 0
 	}
-	sm.votedAs[len(sm.peers)] = 1 //self vote
+	
+	sm.votedAs[len(sm.peers)] = 1 //self vote //last index of votedAs is for self voting
 	sm.votedFor = sm.id
-	actions = append(actions, StateStore{currTerm: sm.term, votedFor: sm.votedFor})
-	actions = append(actions, Alarm{t: rand.Intn(2*sm.timer-sm.timer) + sm.timer})
-
+	actions = append(actions, StateStore{CurrTerm: sm.term, VotedFor: sm.votedFor})
+	
 	for i := 0; i < (len(sm.peers)); i++ {
-		actions = append(actions, Send{peerId: sm.peers[i], event: VoteReqEv{senderId: sm.id,
-			term: sm.term, lastLogIndex: sm.lastLogIndex, lastLogTerm: sm.lastLogTerm}})
+		actions = append(actions, Send{PeerId: sm.peers[i], Event: VoteReqEv{SenderId: sm.id,
+			Term: sm.term, LastLogIndex: int(sm.lastLogIndex), LastLogTerm: sm.lastLogTerm}})
 	}
-
+//	fmt.Println(sm.id, "Inside candidate Timeout")
 	return actions
 }
 
 func handleLeaderTimeout(sm *StateMachine, cmd *Timeout) []interface{} {
+	var prevLogTerm int
 	initialiseActions()
-	actions = append(actions, Alarm{t: rand.Intn(sm.timer)}) //change this
-	var temp []Log
+	actions = append(actions, Alarm{T: sm.heartbeatAlarm}) 
 
-	for i := 0; i < (len(sm.peers)); i++ {
-		prevLogIndex := sm.nextIndex[i] - 1
-		prevLogTerm := sm.log[prevLogIndex].term
-		entries := temp
+			for i := 0; i < len(sm.peers); i++ {
+					prevLogIndex := int(sm.nextIndex[sm.peers[i]]) - 1
+					if prevLogIndex < 0 {
+							prevLogTerm = 0
+					} else if prevLogIndex >= len(sm.log) {
+							continue
+					} else{
+							prevLogTerm = sm.log[prevLogIndex].Term
+					}
 
-		actions = append(actions, Send{peerId: sm.peers[i], event: AppendEntriesReqEv{term: sm.term, senderId: sm.id,
-			prevLogIndex: prevLogIndex, prevLogTerm: prevLogTerm, entries: entries, senderCommitIndex: sm.commitIndex}})
-	}
+					if sm.nextIndex[sm.peers[i]] > len(sm.log) {
+					continue
+					}
+					entries := sm.log[sm.nextIndex[sm.peers[i]]:]
 
+					actions = append(actions, Send{PeerId: sm.peers[i], Event: AppendEntriesReqEv{Term: sm.term, SenderId: sm.id, PrevLogIndex: int64(prevLogIndex),
+					PrevLogTerm: int64(prevLogTerm), Entries: entries, SenderCommitIndex: sm.commitIndex}})
+			}	
+	//fmt.Println(sm.id, "Inside leader Timeout")
 	return actions
 }
