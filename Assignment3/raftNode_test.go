@@ -200,10 +200,9 @@ func TestLeaderFailure(t *testing.T){
 					}
 			}
 	}
-/*	for _, node := range rafts {
+	for _, node := range rafts {
 		node.Shutdown()
 	}
-	*/
 }
 
 /*func TestNetworkPartition(t *testing.T){
