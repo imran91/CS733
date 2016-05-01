@@ -1,6 +1,7 @@
 package main
 import (
 	//"fmt"
+	"github.com/cs733-iitb/cluster/mock"
 	"errors"
 	"os"
 	//"strconv"
@@ -15,6 +16,8 @@ type Node interface {
 
 	// Last known committed index in the log. This could be -1 until the system stabilizes.
 	CommittedIndex() (int,bool)
+
+	ConvertIntoMockServ(*mock.MockServer)//convert server to mock server
 
 	// Returns the data at a log index, or an error.
 	Get(index int) (Log,error)
@@ -58,6 +61,17 @@ func (rn *RaftNode) CommittedIndex() (int, bool) {
 	} else {
 		return -1, false
 	}	
+}
+
+
+func (rn *RaftNode) ConvertIntoMockServ(mockServer *mock.MockServer){
+	rn.MutLock.Lock()
+	defer rn.MutLock.Unlock()
+	if rn.isOn{
+		rn.serv.Close()
+		rn.serv = mockServer
+	}
+
 }
 
 func (rn *RaftNode) Get(index int) (Log,error) {

@@ -2,8 +2,10 @@ package main
 
 import (
 	//"encoding/gob"
+//	"github.com/cs733-iitb/cluster"
+//	"github.com/cs733-iitb/cluster/mock"
 	 "fmt"
-	"time"
+//	"time"
 	"errors"
 	"strconv"
 	"testing"
@@ -45,7 +47,7 @@ func retConfig(selfId int) Config {
 	config.cluster = raft_cluster
 	config.Id = selfId
 	config.LogDir = strconv.Itoa(config.Id)
-	config.ElectionTimeout = 500
+	config.ElectionTimeout = 700
 	config.HeartbeatTimeout = 100
 	return config
 }
@@ -172,7 +174,7 @@ func TestLeaderFailure(t *testing.T){
 	fmt.Println("old leader",ldr)
 	old_ldr_id,_ :=ldr.Id()
 	ldr.Shutdown()
-	time.Sleep(time.Second * 5)
+	//time.Sleep(time.Second * 5)
 	ok = errors.New("err")
 	for ok != nil {
 		ldr, ok = getLeader(rafts)
@@ -198,7 +200,93 @@ func TestLeaderFailure(t *testing.T){
 					}
 			}
 	}
+/*	for _, node := range rafts {
+		node.Shutdown()
+	}
+	*/
+}
+
+/*func TestNetworkPartition(t *testing.T){
+	var partition1,partition2 []Node
+	var partition1_ids,partition2_ids []int
+	var data []string
+	data = append(data,"Cloud")
+	data = append(data,"Computing")
+
+	//rafts = createRafts() // array of []raft.Node
+	mockConfig := cluster.Config{Peers: []cluster.PeerConfig{{Id: 1}, {Id: 2}, {Id: 3}, {Id: 4}, {Id: 5}}}
+	mockCluster, _ := mock.NewCluster(mockConfig)
+	for i:=0;i<5;i++{
+		rafts[i].ConvertIntoMockServ(mockCluster.Servers[i+1])	
+	}
+
+	ok = errors.New("err")
+	for ok != nil {
+		ldr, ok = getLeader(rafts)
+	}
+	//creating partition
+	for _, server := range rafts {
+		server_id ,_ := server.Id()
+		server_leaderid ,_ := server.LeaderId()
+		if server_id == server_leaderid{
+			partition1 = append(partition1,server)
+			partition1_ids = append(partition1_ids,server_id)
+		} else{
+			partition2 = append(partition2,server)
+			partition2_ids = append(partition2_ids,server_id)
+		}
+	}
+
+	ldr := partition1[0]
+	id,_:=ldr.Id()
+	fmt.Println("Partition 1 leader is=",id)
+	ldr.Append([]byte(data[0]))
+	
+	mockCluster.Partition(partition1_ids, partition2_ids)
+	time.Sleep(6 * time.Second)
+
+	fmt.Println("partition 1",partition1_ids)
+	fmt.Println("partition 2",partition2_ids)
+	
+
+	for i := 0; i < len(partition2); i++ {
+		myId, _ := partition2[i].Id()
+		ldrId, _ := partition2[i].LeaderId()
+		if myId == ldrId {
+			fmt.Println("hello")
+			ldr = partition2[i]
+			break
+		}
+	}
+	
+	ok = errors.New("err")
+	for ok != nil {
+		ldr, ok = getLeader(partition2)
+	}	
+	new_id,_:=ldr.Id()
+	fmt.Println("Partition 2 leader is=",new_id)
+	ldr.Append([]byte(data[1]))
+	
+//	time.Sleep(time.Second * 1)
+	mockCluster.Heal()	
+//	time.Sleep(5 * time.Second)
+	
+	for _, rn := range rafts {
+		ch, _ := rn.CommitChannel()
+		node := rn.(*RaftNode)
+					select {
+						case c := <- ch:
+							fmt.Println("data=====",node.sm.id,string(c.Data))
+							if c.Err != nil {
+								t.Error(c.Err)
+							} else if string(c.Data) != data[1] {
+								t.Error("basic: Different data")
+							}
+					}
+		}	
 	for _, node := range rafts {
 		node.Shutdown()
 	}
 }
+
+*/

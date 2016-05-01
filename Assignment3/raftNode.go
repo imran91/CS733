@@ -88,7 +88,7 @@ func (rn *RaftNode) actionHandler(actions []interface{}){
 				logStore := action.(LogStore)
 				err := rn.logFile.TruncateToEnd(int64(logStore.Index))
 				if err!=nil{
-					fmt.Println("logstore action error")	
+					//fmt.Println("logstore action error")	
 				}	
 				//fmt.Println("Log is=",logStore.LogEntry)	
 				/*err = rn.logFile.Append(logStore.LogEntry)
@@ -182,7 +182,7 @@ func New(config Config) Node {
 
 	LogEntries,err = rn.retLog()
 	if err!=nil{
-		fmt.Println("Log retrival failure")
+		//fmt.Println("Log retrival failure")
 	}
 	LogEntries = append(LogEntries,Log{Term:0,Command:nil})
 	

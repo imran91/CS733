@@ -27,6 +27,7 @@ func retConfigFile(config Config)(cluster.Config){
 	return configFile
 }
 
+
 func retPeerIds(config Config)([]int){
 	var peerIds []int
 	for _,temp := range config.cluster {
